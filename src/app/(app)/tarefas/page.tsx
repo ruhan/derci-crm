@@ -67,19 +67,32 @@ export default async function TasksPage({
         action={<NewTaskDialog patients={patients} weekStart={weekISO(week)} />}
       />
 
-      {/* Navegação de semanas */}
-      <div className="flex items-center justify-between">
-        <Button variant="outline" asChild>
-          <Link href={`/tarefas?week=${weekISO(prev)}`}>
-            <ChevronLeft className="h-5 w-5" /> Semana anterior
+      {/* Navegação de semanas: 3 colunas iguais. No mobile os botões
+          laterais mostram apenas o chevron para garantir que cabe na tela. */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <Button variant="outline" asChild className="px-2 sm:px-5">
+          <Link
+            href={`/tarefas?week=${weekISO(prev)}`}
+            aria-label="Semana anterior"
+            className="min-w-0"
+          >
+            <ChevronLeft className="h-5 w-5 shrink-0" />
+            <span className="hidden sm:inline">Anterior</span>
           </Link>
         </Button>
-        <Button variant="outline" asChild>
-          <Link href="/tarefas">Esta semana</Link>
+        <Button variant="outline" asChild className="px-2 sm:px-5">
+          <Link href="/tarefas" className="min-w-0">
+            <span className="truncate">Esta semana</span>
+          </Link>
         </Button>
-        <Button variant="outline" asChild>
-          <Link href={`/tarefas?week=${weekISO(next)}`}>
-            Próxima <ChevronRight className="h-5 w-5" />
+        <Button variant="outline" asChild className="px-2 sm:px-5">
+          <Link
+            href={`/tarefas?week=${weekISO(next)}`}
+            aria-label="Próxima semana"
+            className="min-w-0"
+          >
+            <span className="hidden sm:inline">Próxima</span>
+            <ChevronRight className="h-5 w-5 shrink-0" />
           </Link>
         </Button>
       </div>
@@ -92,10 +105,13 @@ export default async function TasksPage({
         <CountCard label="Concluídas" value={counts.concluidas} />
       </div>
 
-      {/* Filtros simples */}
-      <form className="flex flex-wrap items-end gap-3" method="get">
+      {/* Filtros: empilhados no mobile, lado a lado no desktop */}
+      <form
+        className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 sm:items-end"
+        method="get"
+      >
         <input type="hidden" name="week" value={weekISO(week)} />
-        <div className="flex-1 min-w-[160px]">
+        <div>
           <Label className="mb-2 block">Tipo</Label>
           <select
             name="type"
@@ -110,7 +126,7 @@ export default async function TasksPage({
             ))}
           </select>
         </div>
-        <div className="flex-1 min-w-[160px]">
+        <div>
           <Label className="mb-2 block">Status</Label>
           <select
             name="status"
@@ -125,7 +141,7 @@ export default async function TasksPage({
             <option value="CANCELADA">Cancelada</option>
           </select>
         </div>
-        <Button type="submit" variant="secondary" size="lg">
+        <Button type="submit" variant="secondary" size="lg" className="w-full sm:w-auto">
           Filtrar
         </Button>
       </form>
@@ -144,14 +160,19 @@ export default async function TasksPage({
               defaultValue={weeklyComment?.content ?? ""}
               placeholder="Ex.: Semana com muitas remarcações por causa do feriado."
             />
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               {weeklyComment && (
                 <p className="text-sm text-muted-foreground">
                   Atualizado em {fmtDateTime(weeklyComment.updatedAt)}
                   {weeklyComment.author?.name ? ` por ${weeklyComment.author.name}` : ""}
                 </p>
               )}
-              <Button type="submit" variant="secondary" size="lg" className="ml-auto">
+              <Button
+                type="submit"
+                variant="secondary"
+                size="lg"
+                className="w-full sm:ml-auto sm:w-auto"
+              >
                 Salvar comentário
               </Button>
             </div>
