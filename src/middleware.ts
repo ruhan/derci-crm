@@ -22,10 +22,14 @@ export function middleware(req: NextRequest) {
   // o middleware roda no edge e a chave fica em variável).
   const hasCookie = req.cookies.has("derci_session");
   if (!hasCookie) {
-    const url = req.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(url);
+    // Reconstrói a URL pública usando os headers de proxy (Heroku, Cloudflare),
+    // senão `req.nextUrl` pode trazer o host interno (`localhost:PORT`) na hora
+    // do redirect, causando "Location: http://localhost:..." no navegador.
+    const proto = req.headers.get("x-forwarded-proto") ?? req.nextUrl.protocol.replace(":", "") ?? "https";
+    const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? req.nextUrl.host;
+    const target = new URL(`${proto}://${host}/login`);
+    target.searchParams.set("callbackUrl", pathname);
+    return NextResponse.redirect(target);
   }
 
   return NextResponse.next();
