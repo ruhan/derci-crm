@@ -52,6 +52,23 @@
   select {
     @apply text-base;
   }
+
+  /* Garante que campos de data/hora respeitem a largura do container
+     no iOS Safari, que por padrão usa min-width baseada no placeholder
+     "MM/DD/YYYY" e estoura layouts em telas estreitas. */
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="time"],
+  input[type="month"],
+  input[type="week"] {
+    min-width: 0;
+    max-width: 100%;
+  }
+  input[type="date"]::-webkit-date-and-time-value,
+  input[type="datetime-local"]::-webkit-date-and-time-value,
+  input[type="time"]::-webkit-date-and-time-value {
+    text-align: left;
+  }
 }
 
 @layer utilities {
