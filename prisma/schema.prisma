@@ -1,0 +1,442 @@
+// Schema Prisma do CRM Derci
+// AVISO DE PRIVACIDADE: dados de pacientes são sensíveis. Os campos
+// "summary" (descrição breve) e "internalNotes" devem conter
+// apenas anotações objetivas e não dados clínicos detalhados.
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x", "debian-openssl-3.0.x", "linux-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===================== ENUMS =====================
+
+enum UserRole {
+  ADMIN
+  ATENDIMENTO
+  FINANCEIRO
+}
+
+enum PatientStatus {
+  NOVO_CONTATO
+  EM_NEGOCIACAO
+  ATIVO
+  PAUSADO
+  FECHADO
+  INATIVO
+}
+
+enum PatientOrigin {
+  INDICACAO
+  GOOGLE_ADS
+  INSTAGRAM
+  SITE
+  WHATSAPP
+  OUTRO
+}
+
+enum PlanStatus {
+  AGUARDANDO_PAGAMENTO
+  ABERTO
+  FINALIZADO
+  CANCELADO
+}
+
+enum AppointmentStatus {
+  AGENDADO
+  REALIZADO
+  CANCELADO
+  FALTOU
+  REMARCADO
+}
+
+enum TaskType {
+  RENOVACAO
+  CONTATO_FECHAR_PLANO
+  PAGAMENTO_ATRASADO
+  MENSAGEM_FINANCEIRO
+  OUTRO
+}
+
+enum TaskStatus {
+  A_FAZER
+  EM_ANDAMENTO
+  CONCLUIDA
+  NAO_DEU_CERTO
+  CANCELADA
+}
+
+enum PaymentMethod {
+  ESPECIE
+  PIX
+  CARTAO_CREDITO
+  CARTAO_DEBITO
+  TRANSFERENCIA
+  OUTRO
+}
+
+enum PaymentCategory {
+  TERAPIA
+  LIVRO
+  PALESTRA
+  OUTRO
+}
+
+enum PaymentStatus {
+  PAGO
+  PENDENTE
+  ATRASADO
+  CANCELADO
+}
+
+enum FinancialType {
+  ENTRADA
+  SAIDA
+}
+
+enum FinancialCategory {
+  // entradas
+  TERAPIA
+  LIVRO
+  PALESTRA
+  // saídas
+  ALUGUEL
+  IMPOSTOS
+  PLATAFORMA
+  MARKETING
+  MATERIAL
+  // comum
+  OUTRO
+}
+
+enum FinanceMessageType {
+  NOVO_PLANO
+  RENOVACAO
+  PAGAMENTO_RECEBIDO
+  PAGAMENTO_ATRASADO
+  DUVIDA_FINANCEIRA
+  OUTRO
+}
+
+enum FinanceMessageStatus {
+  ABERTA
+  EM_ANALISE
+  RESOLVIDA
+}
+
+enum TimelineEventType {
+  ENTRADA
+  STATUS_ALTERADO
+  PLANO_CRIADO
+  PLANO_FINALIZADO
+  PLANO_CANCELADO
+  SESSAO_REALIZADA
+  PAGAMENTO_REGISTRADO
+  TAREFA_CRIADA
+  TAREFA_CONCLUIDA
+  COMENTARIO
+  PRONTUARIO_FECHADO
+  PRONTUARIO_REABERTO
+}
+
+// ===================== USUÁRIOS =====================
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(ATENDIMENTO)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relacionamentos de auditoria
+  patientsCreated      Patient[]               @relation("PatientCreatedBy")
+  patientsUpdated      Patient[]               @relation("PatientUpdatedBy")
+  plansCreated         TreatmentPlan[]         @relation("PlanCreatedBy")
+  appointmentsCreated  Appointment[]           @relation("AppointmentCreatedBy")
+  sessionsCreated      Session[]               @relation("SessionCreatedBy")
+  paymentsCreated      Payment[]               @relation("PaymentCreatedBy")
+  txCreated            FinancialTransaction[]  @relation("TxCreatedBy")
+  tasksCreated         Task[]                  @relation("TaskCreatedBy")
+  tasksAssigned        Task[]                  @relation("TaskAssignee")
+  taskComments         TaskComment[]
+  weeklyComments       WeeklyComment[]
+  financeMessages      FinanceMessage[]        @relation("FinMsgCreatedBy")
+  financeMessagesOwn   FinanceMessage[]        @relation("FinMsgAssignee")
+  timelineEvents       PatientTimelineEvent[]
+}
+
+// ===================== PACIENTES =====================
+
+model Patient {
+  id              String        @id @default(cuid())
+  name            String
+  phone           String
+  origin          PatientOrigin
+  referrerName    String?
+  referrerNote    String?
+  entryDate       DateTime
+  status          PatientStatus @default(NOVO_CONTATO)
+  generalHistory  String?       @db.Text
+  internalNotes   String?       @db.Text
+
+  closedAt        DateTime?
+  closedReason    String?
+  reopenedAt      DateTime?
+  reopenedReason  String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdById     String?
+  updatedById     String?
+  createdBy       User?    @relation("PatientCreatedBy", fields: [createdById], references: [id])
+  updatedBy       User?    @relation("PatientUpdatedBy", fields: [updatedById], references: [id])
+
+  plans           TreatmentPlan[]
+  appointments    Appointment[]
+  sessions        Session[]
+  payments        Payment[]
+  tasks           Task[]
+  financeMessages FinanceMessage[]
+  txs             FinancialTransaction[]
+  timeline        PatientTimelineEvent[]
+
+  @@index([status])
+  @@index([name])
+  @@index([phone])
+}
+
+// ===================== PLANOS DE TRATAMENTO =====================
+
+model TreatmentPlan {
+  id              String     @id @default(cuid())
+  patientId       String
+  patient         Patient    @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  totalSessions   Int
+  usedSessions    Int        @default(0)
+  totalValue      Decimal    @db.Decimal(10, 2)
+  startDate       DateTime
+  endDate         DateTime?
+  status          PlanStatus @default(AGUARDANDO_PAGAMENTO)
+  notes           String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdById     String?
+  createdBy       User?     @relation("PlanCreatedBy", fields: [createdById], references: [id])
+
+  appointments Appointment[]
+  sessions     Session[]
+  payments     Payment[]
+
+  @@index([patientId])
+  @@index([status])
+}
+
+// ===================== AGENDA / ATENDIMENTOS =====================
+
+model Appointment {
+  id              String            @id @default(cuid())
+  patientId       String
+  patient         Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  planId          String?
+  plan            TreatmentPlan?    @relation(fields: [planId], references: [id])
+  scheduledAt     DateTime
+  durationMin     Int               @default(50)
+  status          AppointmentStatus @default(AGENDADO)
+  notes           String?
+  cancelReason    String?
+
+  session         Session?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String?
+  createdBy   User?    @relation("AppointmentCreatedBy", fields: [createdById], references: [id])
+
+  @@index([scheduledAt])
+  @@index([patientId])
+  @@index([status])
+}
+
+// ===================== SESSÕES REALIZADAS =====================
+
+// AVISO DE PRIVACIDADE: o campo `summary` deve conter apenas
+// descrição breve e objetiva do atendimento. Evite registrar
+// informações clínicas sensíveis ou identificáveis aqui no MVP.
+model Session {
+  id              String   @id @default(cuid())
+  patientId       String
+  patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  planId          String?
+  plan            TreatmentPlan? @relation(fields: [planId], references: [id])
+  appointmentId   String?  @unique
+  appointment     Appointment? @relation(fields: [appointmentId], references: [id])
+  occurredAt      DateTime
+  durationMin     Int      @default(50)
+  summary         String   @db.Text
+  internalNotes   String?  @db.Text
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String?
+  createdBy   User?    @relation("SessionCreatedBy", fields: [createdById], references: [id])
+
+  @@index([patientId])
+  @@index([occurredAt])
+}
+
+// ===================== PAGAMENTOS =====================
+
+model Payment {
+  id              String          @id @default(cuid())
+  patientId       String?
+  patient         Patient?        @relation(fields: [patientId], references: [id])
+  planId          String?
+  plan            TreatmentPlan?  @relation(fields: [planId], references: [id])
+  paidAt          DateTime
+  dueAt           DateTime?
+  amount          Decimal         @db.Decimal(10, 2)
+  method          PaymentMethod
+  category        PaymentCategory @default(TERAPIA)
+  status          PaymentStatus   @default(PAGO)
+  notes           String?
+
+  transaction     FinancialTransaction?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String?
+  createdBy   User?    @relation("PaymentCreatedBy", fields: [createdById], references: [id])
+
+  @@index([patientId])
+  @@index([status])
+  @@index([paidAt])
+}
+
+// ===================== FINANCEIRO =====================
+
+model FinancialTransaction {
+  id              String            @id @default(cuid())
+  type            FinancialType
+  occurredAt      DateTime
+  amount          Decimal           @db.Decimal(10, 2)
+  category        FinancialCategory
+  method          PaymentMethod?
+  description     String?
+  patientId       String?
+  patient         Patient?          @relation(fields: [patientId], references: [id])
+  paymentId       String?           @unique
+  payment         Payment?          @relation(fields: [paymentId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String?
+  createdBy   User?    @relation("TxCreatedBy", fields: [createdById], references: [id])
+
+  @@index([occurredAt])
+  @@index([type])
+  @@index([category])
+}
+
+// ===================== TAREFAS DA SEMANA =====================
+
+model Task {
+  id              String     @id @default(cuid())
+  patientId       String?
+  patient         Patient?   @relation(fields: [patientId], references: [id])
+  title           String
+  type            TaskType   @default(OUTRO)
+  description     String?    @db.Text
+  // Início (segunda) da semana de referência (UTC-zerada)
+  weekStart       DateTime
+  dueDate         DateTime?
+  status          TaskStatus @default(A_FAZER)
+  assigneeId      String?
+  assignee        User?      @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  completedAt     DateTime?
+
+  comments TaskComment[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String?
+  createdBy   User?    @relation("TaskCreatedBy", fields: [createdById], references: [id])
+
+  @@index([weekStart])
+  @@index([status])
+  @@index([type])
+  @@index([patientId])
+}
+
+model TaskComment {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  content   String   @db.Text
+  authorId  String?
+  author    User?    @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([taskId])
+}
+
+// ===================== COMENTÁRIO SEMANAL GERAL =====================
+
+model WeeklyComment {
+  id        String   @id @default(cuid())
+  weekStart DateTime @unique
+  content   String   @db.Text
+  authorId  String?
+  author    User?    @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ===================== MENSAGENS PARA FINANCEIRO =====================
+
+model FinanceMessage {
+  id          String               @id @default(cuid())
+  patientId   String?
+  patient     Patient?             @relation(fields: [patientId], references: [id])
+  type        FinanceMessageType
+  message     String               @db.Text
+  status      FinanceMessageStatus @default(ABERTA)
+  assigneeId  String?
+  assignee    User?                @relation("FinMsgAssignee", fields: [assigneeId], references: [id])
+  resolvedAt  DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String?
+  createdBy   User?    @relation("FinMsgCreatedBy", fields: [createdById], references: [id])
+
+  @@index([status])
+  @@index([type])
+}
+
+// ===================== TIMELINE DE PACIENTE =====================
+
+model PatientTimelineEvent {
+  id          String            @id @default(cuid())
+  patientId   String
+  patient     Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  type        TimelineEventType
+  title       String
+  description String?           @db.Text
+  // Metadado opcional (id de plano, sessão, pagamento etc.)
+  refId       String?
+  occurredAt  DateTime          @default(now())
+  authorId    String?
+  author      User?             @relation(fields: [authorId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([patientId])
+  @@index([occurredAt])
+}

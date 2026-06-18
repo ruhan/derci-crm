@@ -1,0 +1,81 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: derci
+      POSTGRES_PASSWORD: derci
+      POSTGRES_DB: derci
+    ports:
+      - "5432:5432"
+    volumes:
+      - derci_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U derci -d derci"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    networks:
+      - derci_net
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://derci:derci@db:5432/derci?schema=public
+      AUTH_SECRET: ${AUTH_SECRET:-troque-este-segredo-em-producao-com-32-caracteres-ou-mais}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@derci.local}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-admin123}
+      SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-Administradora}
+      RUN_SEED: ${RUN_SEED:-true}
+      NODE_ENV: production
+      PORT: "3000"
+    ports:
+      - "3000:3000"
+    networks:
+      - derci_net
+    command:
+      - sh
+      - -c
+      - |
+        set -e
+        echo "> Aplicando schema ao banco..."
+        if [ -n "$$(find prisma/migrations -mindepth 1 -maxdepth 1 -type d 2>/dev/null)" ]; then
+          echo "  Encontradas migrations versionadas, usando 'prisma migrate deploy'."
+          i=0
+          until npx prisma migrate deploy; do
+            i=$$((i+1))
+            if [ $$i -ge 30 ]; then echo "!! migrate deploy falhou após 30 tentativas"; exit 1; fi
+            echo "  retry $$i/30 em 3s..."
+            sleep 3
+          done
+        else
+          echo "  Sem migrations, aplicando schema com 'prisma db push'."
+          i=0
+          until npx prisma db push --skip-generate --accept-data-loss; do
+            i=$$((i+1))
+            if [ $$i -ge 30 ]; then echo "!! db push falhou após 30 tentativas"; exit 1; fi
+            echo "  retry $$i/30 em 3s..."
+            sleep 3
+          done
+        fi
+        if [ "$$RUN_SEED" = "true" ]; then
+          echo "> Rodando seed..."
+          npx prisma db seed || echo "> Seed pulado (provavelmente já populado)."
+        else
+          echo "> Seed pulado (RUN_SEED!=true)."
+        fi
+        echo "> Iniciando Next.js..."
+        exec npx next start -p 3000
+
+volumes:
+  derci_pg:
+
+networks:
+  derci_net:
+    driver: bridge

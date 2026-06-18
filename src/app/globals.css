@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 215 70% 38%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 215 25% 92%;
+    --secondary-foreground: 222 47% 15%;
+    --muted: 215 16% 95%;
+    --muted-foreground: 215 16% 38%;
+    --accent: 215 25% 90%;
+    --accent-foreground: 222 47% 15%;
+    --destructive: 0 72% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 60% 38%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 48%;
+    --warning-foreground: 0 0% 0%;
+    --info: 199 89% 45%;
+    --info-foreground: 0 0% 100%;
+    --border: 215 20% 85%;
+    --input: 215 20% 85%;
+    --ring: 215 70% 38%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  /* Aumenta tamanho de toque em mobile */
+  button,
+  [role="button"],
+  input,
+  textarea,
+  select {
+    @apply text-base;
+  }
+}
+
+@layer utilities {
+  .safe-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
