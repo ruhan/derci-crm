@@ -36,7 +36,7 @@ export default async function FinancePage({
   if (searchParams.type === "ENTRADA" || searchParams.type === "SAIDA") where.type = searchParams.type;
   if (searchParams.category) where.category = searchParams.category;
 
-  const [txs, allTxs] = await Promise.all([
+  const [txs, allTxs, patients] = await Promise.all([
     prisma.financialTransaction.findMany({
       where,
       include: { patient: { select: { name: true, id: true } } },
@@ -44,6 +44,10 @@ export default async function FinancePage({
     }),
     prisma.financialTransaction.findMany({
       where: { occurredAt: { gte: from, lte: to } },
+    }),
+    prisma.patient.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
     }),
   ]);
 
@@ -63,7 +67,7 @@ export default async function FinancePage({
       <PageHeader
         title="Financeiro"
         description={format(monthDate, "MMMM 'de' yyyy", { locale: ptBR })}
-        action={<NewTransactionDialog />}
+        action={<NewTransactionDialog patients={patients} />}
       />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -153,7 +157,11 @@ export default async function FinancePage({
                     <p className="text-sm text-muted-foreground">
                       {fmtDate(t.occurredAt)} — {FINANCIAL_CATEGORY_LABEL[t.category]}
                       {t.method ? ` — ${PAYMENT_METHOD_LABEL[t.method]}` : ""}
-                      {t.patient ? ` — ${t.patient.name}` : ""}
+                      {t.patient
+                        ? ` — ${t.patient.name}`
+                        : t.source
+                          ? ` — Outro — ${t.source}`
+                          : " — Outro"}
                     </p>
                     {t.description && <p className="text-sm">{t.description}</p>}
                   </div>

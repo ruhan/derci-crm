@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { fmtDateTime, TASK_TYPE_LABEL } from "@/lib/format";
+import { fmtDateTime, SELECTABLE_TASK_TYPES } from "@/lib/format";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { formatWeekRange, parseWeekParam, shiftWeek, weekISO } from "@/lib/week";
 import { TaskCard } from "@/components/task/task-card";
@@ -119,9 +119,9 @@ export default async function TasksPage({
             className="h-12 w-full rounded-lg border-2 border-input bg-background px-4 text-base"
           >
             <option value="">Todos os tipos</option>
-            {Object.entries(TASK_TYPE_LABEL).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
+            {SELECTABLE_TASK_TYPES.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
               </option>
             ))}
           </select>

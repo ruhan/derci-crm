@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PatientCombobox } from "@/components/patient/patient-combobox";
-import { TASK_TYPE_LABEL } from "@/lib/format";
+import { SELECTABLE_TASK_TYPES } from "@/lib/format";
 import { createTaskAction } from "@/server/actions/tasks";
 
 export function NewTaskDialog({
@@ -52,9 +52,9 @@ export function NewTaskDialog({
               defaultValue="OUTRO"
               className="h-12 w-full rounded-lg border-2 border-input bg-background px-4 text-base"
             >
-              {Object.entries(TASK_TYPE_LABEL).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v}
+              {SELECTABLE_TASK_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
                 </option>
               ))}
             </select>

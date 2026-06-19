@@ -245,7 +245,7 @@ model Appointment {
   planId          String?
   plan            TreatmentPlan?    @relation(fields: [planId], references: [id])
   scheduledAt     DateTime
-  durationMin     Int               @default(50)
+  durationMin     Int               @default(90)
   status          AppointmentStatus @default(AGENDADO)
   notes           String?
   cancelReason    String?
@@ -276,7 +276,7 @@ model Session {
   appointmentId   String?  @unique
   appointment     Appointment? @relation(fields: [appointmentId], references: [id])
   occurredAt      DateTime
-  durationMin     Int      @default(50)
+  durationMin     Int      @default(90)
   summary         String   @db.Text
   internalNotes   String?  @db.Text
 
@@ -327,6 +327,9 @@ model FinancialTransaction {
   category        FinancialCategory
   method          PaymentMethod?
   description     String?
+  /// Fonte/origem livre quando o lançamento NÃO está atrelado a um paciente
+  /// (ex.: "Aluguel sala", "Editora X", "Palestra Y"). Ignorado se patientId estiver setado.
+  source          String?
   patientId       String?
   patient         Patient?          @relation(fields: [patientId], references: [id])
   paymentId       String?           @unique

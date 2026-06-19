@@ -5,27 +5,6 @@ const PUBLIC_PATHS = ["/login", "/api/auth"];
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Resolve o protocolo e host públicos (atrás do proxy do Heroku/Cloudflare).
-  const fwdProto = req.headers.get("x-forwarded-proto");
-  const proto = fwdProto ?? req.nextUrl.protocol.replace(":", "") ?? "https";
-  const host =
-    req.headers.get("x-forwarded-host") ??
-    req.headers.get("host") ??
-    req.nextUrl.host;
-
-  // Em produção, força HTTPS. Sem isso, o cookie de sessão (secure: true)
-  // nunca é enviado e o usuário fica em loop de redirect para /login.
-  if (
-    process.env.NODE_ENV === "production" &&
-    fwdProto &&
-    fwdProto !== "https"
-  ) {
-    const httpsUrl = new URL(
-      `https://${host}${pathname}${req.nextUrl.search}`,
-    );
-    return NextResponse.redirect(httpsUrl, 308);
-  }
-
   if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
     return NextResponse.next();
   }
@@ -40,6 +19,16 @@ export function middleware(req: NextRequest) {
 
   const hasCookie = req.cookies.has("derci_session");
   if (!hasCookie) {
+    // Reconstrói a URL pública usando os headers do proxy (Heroku/Cloudflare),
+    // senão `req.nextUrl` pode trazer o host interno (`localhost:PORT`).
+    const proto =
+      req.headers.get("x-forwarded-proto") ??
+      req.nextUrl.protocol.replace(":", "") ??
+      "https";
+    const host =
+      req.headers.get("x-forwarded-host") ??
+      req.headers.get("host") ??
+      req.nextUrl.host;
     const target = new URL(`${proto}://${host}/login`);
     target.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(target);

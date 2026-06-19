@@ -62,6 +62,13 @@ export async function createTransactionAction(formData: FormData) {
     );
   }
   const d = parsed.data;
+  const patientId = d.patientId && d.patientId.length > 0 ? d.patientId : null;
+  // Quando há paciente associado, a "fonte" é ignorada (o paciente já é a fonte).
+  const source = patientId
+    ? null
+    : d.source && d.source.trim().length > 0
+      ? d.source.trim()
+      : null;
   await prisma.financialTransaction.create({
     data: {
       type: d.type,
@@ -70,7 +77,8 @@ export async function createTransactionAction(formData: FormData) {
       category: d.category,
       method: d.method ?? null,
       description: d.description ?? null,
-      patientId: d.patientId || null,
+      patientId,
+      source,
       createdById: user.id,
     },
   });

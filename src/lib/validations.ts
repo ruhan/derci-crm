@@ -33,8 +33,8 @@ export type PatientInput = z.infer<typeof PatientSchema>;
 
 export const PlanSchema = z.object({
   patientId: z.string().min(1),
-  totalSessions: z.coerce.number().int().refine((n) => [2, 4, 6].includes(n), {
-    message: "Plano deve ser de 2, 4 ou 6 sessões",
+  totalSessions: z.coerce.number().int().refine((n) => [1, 2, 4, 6].includes(n), {
+    message: "Plano deve ser de 1 (avulsa), 2, 4 ou 6 sessões",
   }),
   startDate: z.string().min(1, "Data de início obrigatória"),
   endDate: z.string().optional().nullable(),
@@ -122,28 +122,41 @@ export const FinanceMessageSchema = z.object({
   message: z.string().min(2, "Mensagem obrigatória"),
 });
 
-export const TransactionSchema = z.object({
-  type: z.enum(["ENTRADA", "SAIDA"]),
-  occurredAt: z.string().min(1),
-  amount: z.coerce.number().positive(),
-  category: z.enum([
-    "TERAPIA",
-    "LIVRO",
-    "PALESTRA",
-    "ALUGUEL",
-    "IMPOSTOS",
-    "PLATAFORMA",
-    "MARKETING",
-    "MATERIAL",
-    "OUTRO",
-  ]),
-  method: z
-    .enum(["ESPECIE", "PIX", "CARTAO_CREDITO", "CARTAO_DEBITO", "TRANSFERENCIA", "OUTRO"])
-    .optional()
-    .nullable(),
-  description: z.string().optional().nullable(),
-  patientId: z.string().optional().nullable(),
-});
+export const TransactionSchema = z
+  .object({
+    type: z.enum(["ENTRADA", "SAIDA"]),
+    occurredAt: z.string().min(1),
+    amount: z.coerce.number().positive(),
+    category: z.enum([
+      "TERAPIA",
+      "LIVRO",
+      "PALESTRA",
+      "ALUGUEL",
+      "IMPOSTOS",
+      "PLATAFORMA",
+      "MARKETING",
+      "MATERIAL",
+      "OUTRO",
+    ]),
+    method: z
+      .enum(["ESPECIE", "PIX", "CARTAO_CREDITO", "CARTAO_DEBITO", "TRANSFERENCIA", "OUTRO"])
+      .optional()
+      .nullable(),
+    description: z.string().optional().nullable(),
+    patientId: z.string().optional().nullable(),
+    source: z.string().optional().nullable(),
+  })
+  .superRefine((data, ctx) => {
+    const hasPatient = !!(data.patientId && data.patientId.length > 0);
+    const hasSource = !!(data.source && data.source.trim().length > 0);
+    if (!hasPatient && !hasSource) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["source"],
+        message: "Informe a fonte do lançamento ou selecione um paciente.",
+      });
+    }
+  });
 
 export const UserSchema = z.object({
   name: z.string().min(2),

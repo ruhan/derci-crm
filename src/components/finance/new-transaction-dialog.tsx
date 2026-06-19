@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { PatientCombobox } from "@/components/patient/patient-combobox";
 import {
   FINANCIAL_CATEGORY_LABEL,
   PAYMENT_METHOD_LABEL,
@@ -25,7 +26,11 @@ import { createTransactionAction } from "@/server/actions/finance";
 const METHODS = ["ESPECIE", "PIX", "CARTAO_CREDITO", "CARTAO_DEBITO", "TRANSFERENCIA", "OUTRO"];
 const CATEGORIES = Object.keys(FINANCIAL_CATEGORY_LABEL);
 
-export function NewTransactionDialog() {
+export function NewTransactionDialog({
+  patients,
+}: {
+  patients: { id: string; name: string }[];
+}) {
   const [open, setOpen] = useState(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -34,7 +39,7 @@ export function NewTransactionDialog() {
           <Plus className="h-5 w-5" /> Novo lançamento
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Novo lançamento financeiro</DialogTitle>
         </DialogHeader>
@@ -100,10 +105,35 @@ export function NewTransactionDialog() {
               </select>
             </div>
           </div>
+
           <div className="space-y-2">
-            <Label htmlFor="description">Descrição</Label>
+            <Label htmlFor="patient-finance-combobox">Paciente (opcional)</Label>
+            <PatientCombobox
+              patients={patients}
+              id="patient-finance-combobox"
+              placeholder="Buscar paciente pelo nome..."
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="source">Fonte (se não houver paciente)</Label>
+            <Input
+              id="source"
+              name="source"
+              placeholder="Ex.: Aluguel da sala, Editora X, Palestra Y..."
+            />
+            <p className="text-sm text-muted-foreground">
+              Se você associar um paciente acima, este campo é ignorado.
+              Caso contrário, o lançamento aparecerá como{" "}
+              <span className="font-semibold">Outro — {`{fonte}`}</span>.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Descrição (opcional)</Label>
             <Textarea id="description" name="description" rows={2} />
           </div>
+
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="ghost" size="lg">

@@ -19,7 +19,7 @@ import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { AppointmentStatusBadge } from "@/components/ui/status-badge";
 import { fmtDateTime, fmtTime } from "@/lib/format";
 import { getWeekStart, getWeekEnd, formatWeekRange } from "@/lib/week";
-import { ScheduleAppointmentForm } from "@/components/appointment/schedule-form";
+import { ScheduleAppointmentDialog } from "@/components/appointment/schedule-dialog";
 import { AppointmentActions } from "@/components/appointment/appointment-actions";
 import { EmptyState } from "@/components/ui/empty-state";
 
@@ -84,7 +84,11 @@ export default async function AgendaPage({
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Agenda" description={label} />
+      <PageHeader
+        title="Agenda"
+        description={label}
+        action={<ScheduleAppointmentDialog patients={patients} />}
+      />
 
       <div className="flex flex-wrap items-center gap-2">
         <ViewLink current={view} value="dia" date={baseDate}>
@@ -119,12 +123,11 @@ export default async function AgendaPage({
         </div>
       </div>
 
-      {/* Lista de atendimentos do período (primeiro, conforme pedido) */}
       {appts.length === 0 ? (
         <EmptyState
           icon={<Plus className="h-10 w-10" />}
           title="Sem atendimentos no período"
-          description="Use o formulário abaixo para agendar um atendimento."
+          description='Toque em "Agendar atendimento" no topo para criar um novo.'
         />
       ) : view === "dia" ? (
         <DayList appts={appts} />
@@ -144,16 +147,6 @@ export default async function AgendaPage({
           ))}
         </div>
       )}
-
-      {/* Cadastrar novo atendimento (vem por último) */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Agendar atendimento</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ScheduleAppointmentForm patients={patients} />
-        </CardContent>
-      </Card>
     </div>
   );
 }

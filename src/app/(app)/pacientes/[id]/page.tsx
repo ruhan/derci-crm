@@ -29,7 +29,7 @@ import { NewPlanDialog } from "@/components/plan/new-plan-dialog";
 import { NewPaymentForm } from "@/components/payment/new-payment-form";
 import { ClosePatientButton } from "@/components/patient/close-patient-button";
 import { ReopenPatientButton } from "@/components/patient/reopen-patient-button";
-import { ScheduleAppointmentForm } from "@/components/appointment/schedule-form";
+import { ScheduleAppointmentDialog } from "@/components/appointment/schedule-dialog";
 
 export const dynamic = "force-dynamic";
 
@@ -143,13 +143,13 @@ export default async function PatientPage({ params }: { params: { id: string } }
                 </span>
               </div>
               <p className="text-base">
-                <strong>{remaining}</strong> de <strong>{activePlan.totalSessions}</strong> sessões disponíveis.
+                Faltam <strong>{remaining}</strong> de <strong>{activePlan.totalSessions}</strong> sessões disponíveis.
               </p>
             </div>
           ) : (
             <EmptyState
               title="Sem plano ativo"
-              description="Crie um plano de 2, 4 ou 6 sessões para liberar atendimentos."
+              description="Crie um plano (avulso, 2, 4 ou 6 sessões) para liberar atendimentos."
             />
           )}
         </CardContent>
@@ -177,26 +177,16 @@ export default async function PatientPage({ params }: { params: { id: string } }
         </Card>
       )}
 
-      {/* Agendar atendimento */}
-      {!isClosed && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Agendar atendimento</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ScheduleAppointmentForm
-              patients={[{ id: p.id, name: p.name }]}
-              defaultPatientId={p.id}
-              compact
-            />
-          </CardContent>
-        </Card>
-      )}
-
       {/* Atendimentos */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
           <CardTitle>Atendimentos</CardTitle>
+          {!isClosed && (
+            <ScheduleAppointmentDialog
+              patients={[{ id: p.id, name: p.name }]}
+              defaultPatientId={p.id}
+            />
+          )}
         </CardHeader>
         <CardContent>
           {p.appointments.length === 0 ? (

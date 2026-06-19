@@ -96,6 +96,16 @@ export const TASK_TYPE_LABEL: Record<string, string> = {
   OUTRO: "Outro",
 };
 
+// Tipos disponíveis para o usuário escolher (filtros e formulário de nova tarefa).
+// "MENSAGEM_FINANCEIRO" é mantido apenas para exibir tarefas legadas;
+// não deve mais aparecer como opção selecionável.
+export const SELECTABLE_TASK_TYPES: Array<{ value: string; label: string }> = [
+  { value: "RENOVACAO", label: "Renovação com pagamento" },
+  { value: "CONTATO_FECHAR_PLANO", label: "Entrar em contato para fechar plano" },
+  { value: "PAGAMENTO_ATRASADO", label: "Pagamento em atraso" },
+  { value: "OUTRO", label: "Outro" },
+];
+
 export const TASK_STATUS_LABEL: Record<string, string> = {
   A_FAZER: "A fazer",
   EM_ANDAMENTO: "Em andamento",

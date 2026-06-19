@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { createPlanAction } from "@/server/actions/plans";
 
 const PLAN_OPTIONS = [
+  { value: 1, label: "Sessão avulsa (1 sessão)" },
   { value: 2, label: "Plano de 2 sessões" },
   { value: 4, label: "Plano de 4 sessões" },
   { value: 6, label: "Plano de 6 sessões" },
