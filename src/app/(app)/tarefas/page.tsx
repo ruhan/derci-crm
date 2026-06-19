@@ -46,7 +46,7 @@ export default async function TasksPage({
       include: { author: { select: { name: true } } },
     }),
     prisma.patient.findMany({
-      where: { status: { notIn: ["FECHADO", "INATIVO"] } },
+      where: { status: { not: "FECHADO" } },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),

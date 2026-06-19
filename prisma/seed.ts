@@ -87,16 +87,14 @@ async function main() {
       | "INDICACAO"
       | "GOOGLE_ADS"
       | "INSTAGRAM"
-      | "SITE"
-      | "WHATSAPP"
       | "OUTRO";
     status:
-      | "NOVO_CONTATO"
-      | "EM_NEGOCIACAO"
+      | "FEZ_PRIMEIRA_SESSAO"
+      | "EM_CONVERSACAO"
+      | "NAO_FECHOU_FINANCEIRO"
+      | "PAROU_DE_RESPONDER"
       | "ATIVO"
-      | "PAUSADO"
-      | "FECHADO"
-      | "INATIVO";
+      | "FECHADO";
     referrerName?: string;
     plan?: { sessions: 2 | 4 | 6; value: number; used: number };
     daysAgo: number;
@@ -122,20 +120,20 @@ async function main() {
       name: "Camila Souza",
       phone: "11955554444",
       origin: "GOOGLE_ADS",
-      status: "EM_NEGOCIACAO",
+      status: "EM_CONVERSACAO",
       daysAgo: 3,
     },
     {
       name: "Daniel Lima",
       phone: "11944443333",
-      origin: "WHATSAPP",
-      status: "NOVO_CONTATO",
+      origin: "INSTAGRAM",
+      status: "FEZ_PRIMEIRA_SESSAO",
       daysAgo: 1,
     },
     {
       name: "Elaine Ribeiro",
       phone: "11933332222",
-      origin: "SITE",
+      origin: "INDICACAO",
       status: "ATIVO",
       plan: { sessions: 2, value: 400, used: 2 },
       daysAgo: 60,
@@ -145,7 +143,7 @@ async function main() {
       phone: "11922221111",
       origin: "INDICACAO",
       referrerName: "Carolina (paciente)",
-      status: "PAUSADO",
+      status: "PAROU_DE_RESPONDER",
       plan: { sessions: 4, value: 800, used: 3 },
       daysAgo: 45,
     },
@@ -190,11 +188,7 @@ async function main() {
           totalValue: new Prisma.Decimal(sp.plan.value),
           startDate: entryDate,
           status:
-            sp.plan.used >= sp.plan.sessions
-              ? "FINALIZADO"
-              : sp.status === "PAUSADO"
-                ? "ABERTO"
-                : "ABERTO",
+            sp.plan.used >= sp.plan.sessions ? "FINALIZADO" : "ABERTO",
           createdById: admin.id,
         },
       });
@@ -264,7 +258,7 @@ async function main() {
       });
     }
 
-    if (sp.status === "EM_NEGOCIACAO") {
+    if (sp.status === "EM_CONVERSACAO") {
       await prisma.task.create({
         data: {
           title: `Fechar plano com ${sp.name}`,

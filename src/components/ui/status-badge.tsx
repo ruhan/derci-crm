@@ -19,12 +19,12 @@ type Variant =
   | "outline";
 
 const PATIENT_VARIANT: Record<string, Variant> = {
-  NOVO_CONTATO: "info",
-  EM_NEGOCIACAO: "warning",
+  FEZ_PRIMEIRA_SESSAO: "info",
+  EM_CONVERSACAO: "warning",
+  NAO_FECHOU_FINANCEIRO: "destructive",
+  PAROU_DE_RESPONDER: "secondary",
   ATIVO: "success",
-  PAUSADO: "secondary",
   FECHADO: "muted",
-  INATIVO: "muted",
 };
 
 const PLAN_VARIANT: Record<string, Variant> = {

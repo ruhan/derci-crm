@@ -21,20 +21,18 @@ enum UserRole {
 }
 
 enum PatientStatus {
-  NOVO_CONTATO
-  EM_NEGOCIACAO
+  FEZ_PRIMEIRA_SESSAO
+  EM_CONVERSACAO
+  NAO_FECHOU_FINANCEIRO
+  PAROU_DE_RESPONDER
   ATIVO
-  PAUSADO
   FECHADO
-  INATIVO
 }
 
 enum PatientOrigin {
   INDICACAO
   GOOGLE_ADS
   INSTAGRAM
-  SITE
-  WHATSAPP
   OUTRO
 }
 
@@ -181,7 +179,7 @@ model Patient {
   referrerName    String?
   referrerNote    String?
   entryDate       DateTime
-  status          PatientStatus @default(NOVO_CONTATO)
+  status          PatientStatus @default(EM_CONVERSACAO)
   generalHistory  String?       @db.Text
   internalNotes   String?       @db.Text
 
@@ -219,10 +217,10 @@ model TreatmentPlan {
   patient         Patient    @relation(fields: [patientId], references: [id], onDelete: Cascade)
   totalSessions   Int
   usedSessions    Int        @default(0)
-  totalValue      Decimal    @db.Decimal(10, 2)
+  totalValue      Decimal?   @db.Decimal(10, 2)
   startDate       DateTime
   endDate         DateTime?
-  status          PlanStatus @default(AGUARDANDO_PAGAMENTO)
+  status          PlanStatus @default(ABERTO)
   notes           String?
 
   createdAt       DateTime  @default(now())

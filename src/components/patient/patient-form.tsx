@@ -11,9 +11,10 @@ import {
   PATIENT_ORIGIN_LABEL,
   PATIENT_STATUS_LABEL,
 } from "@/lib/format";
+import { PATIENT_ORIGINS, PATIENT_STATUSES } from "@/lib/validations";
 
-const ORIGINS = ["INDICACAO", "GOOGLE_ADS", "INSTAGRAM", "SITE", "WHATSAPP", "OUTRO"] as const;
-const STATUSES = ["NOVO_CONTATO", "EM_NEGOCIACAO", "ATIVO", "PAUSADO", "FECHADO", "INATIVO"] as const;
+const ORIGINS = PATIENT_ORIGINS;
+const STATUSES = PATIENT_STATUSES;
 
 type Initial = {
   name?: string;
@@ -96,7 +97,7 @@ export function PatientForm({
               <select
                 id="status"
                 name="status"
-                defaultValue={initial.status ?? "NOVO_CONTATO"}
+                defaultValue={initial.status ?? "EM_CONVERSACAO"}
                 className="h-12 w-full rounded-lg border-2 border-input bg-background px-4 text-base"
                 required
               >

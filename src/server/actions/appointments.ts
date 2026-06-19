@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
-import { AppointmentSchema, AppointmentStatusSchema } from "@/lib/validations";
+import {
+  AppointmentSchema,
+  AppointmentStatusSchema,
+  RescheduleAppointmentSchema,
+} from "@/lib/validations";
 import { consumeSessionFromActivePlan } from "@/server/actions/plans";
 import { logTimelineEvent } from "@/server/timeline";
 
@@ -146,6 +150,59 @@ export async function updateAppointmentStatusAction(formData: FormData) {
   revalidatePath("/agenda");
   revalidatePath(`/pacientes/${appt!.patientId}`);
   redirect(`/agenda?ok=${encodeURIComponent("Atendimento atualizado")}`);
+}
+
+export async function rescheduleAppointmentAction(formData: FormData) {
+  const user = await requireUser();
+  const parsed = RescheduleAppointmentSchema.safeParse(fdToObj(formData));
+  if (!parsed.success) {
+    redirect(
+      `/agenda?err=${encodeURIComponent(
+        parsed.error.issues[0]?.message ?? "Dados inválidos"
+      )}`
+    );
+  }
+  const { appointmentId, scheduledAt, durationMin, reason } = parsed.data;
+
+  const appt = await prisma.appointment.findUnique({
+    where: { id: appointmentId },
+  });
+  if (!appt) {
+    redirect(`/agenda?err=${encodeURIComponent("Atendimento não encontrado")}`);
+  }
+  if (appt!.status === "REALIZADO") {
+    redirect(
+      `/agenda?err=${encodeURIComponent(
+        "Sessões já realizadas não podem ser remarcadas"
+      )}`
+    );
+  }
+
+  const newDate = new Date(scheduledAt);
+  await prisma.appointment.update({
+    where: { id: appointmentId },
+    data: {
+      scheduledAt: newDate,
+      durationMin,
+      status: "AGENDADO",
+      cancelReason: null,
+    },
+  });
+
+  await logTimelineEvent({
+    patientId: appt!.patientId,
+    type: "STATUS_ALTERADO",
+    title: "Atendimento remarcado",
+    description: `De ${appt!.scheduledAt.toLocaleString("pt-BR")} para ${newDate.toLocaleString(
+      "pt-BR"
+    )}${reason ? ` — ${reason}` : ""}`,
+    refId: appointmentId,
+    authorId: user.id,
+  });
+
+  revalidatePath("/agenda");
+  revalidatePath(`/pacientes/${appt!.patientId}`);
+  redirect(`/agenda?ok=${encodeURIComponent("Atendimento remarcado")}`);
 }
 
 export async function deleteAppointmentAction(appointmentId: string) {

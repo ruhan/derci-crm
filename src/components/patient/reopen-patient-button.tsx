@@ -39,7 +39,10 @@ export function ReopenPatientButton({ patientId }: { patientId: string }) {
               className="h-12 w-full rounded-lg border-2 border-input bg-background px-4 text-base"
             >
               <option value="ATIVO">Ativo</option>
-              <option value="EM_NEGOCIACAO">Em negociação</option>
+              <option value="EM_CONVERSACAO">Em conversação</option>
+              <option value="FEZ_PRIMEIRA_SESSAO">Fez primeira sessão</option>
+              <option value="NAO_FECHOU_FINANCEIRO">Não fechou por questão financeira</option>
+              <option value="PAROU_DE_RESPONDER">Parou de responder</option>
             </select>
           </div>
           <div className="space-y-2">

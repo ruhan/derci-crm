@@ -27,15 +27,16 @@ export async function createPlanAction(formData: FormData) {
   }
   const data = parsed.data;
 
+  // O plano agora é independente de pagamento. Já nasce ABERTO; o
+  // pagamento (TERAPIA) será associado depois pelo financeiro.
   const plan = await prisma.treatmentPlan.create({
     data: {
       patientId: data.patientId,
       totalSessions: data.totalSessions,
       usedSessions: 0,
-      totalValue: data.totalValue,
       startDate: new Date(data.startDate),
       endDate: data.endDate ? new Date(data.endDate) : null,
-      status: data.status,
+      status: "ABERTO",
       notes: data.notes ?? null,
       createdById: user.id,
     },
@@ -45,24 +46,11 @@ export async function createPlanAction(formData: FormData) {
     patientId: data.patientId,
     type: "PLANO_CRIADO",
     title: `Plano de ${data.totalSessions} sessões`,
-    description: `Valor total: R$ ${data.totalValue.toFixed(2)}`,
     refId: plan.id,
     authorId: user.id,
   });
 
-  // Mensagem para financeiro: novo plano
-  await prisma.financeMessage.create({
-    data: {
-      patientId: data.patientId,
-      type: "NOVO_PLANO",
-      message: `Novo plano de ${data.totalSessions} sessões cadastrado. Status: ${data.status}.`,
-      status: "ABERTA",
-      createdById: user.id,
-    },
-  });
-
   revalidatePath(`/pacientes/${data.patientId}`);
-  revalidatePath("/financeiro/mensagens");
   redirect(
     `/pacientes/${data.patientId}?ok=${encodeURIComponent("Plano criado com sucesso")}`
   );
@@ -155,7 +143,7 @@ export async function consumeSessionFromActivePlan(args: {
     // Tarefa automática de renovação para a semana atual.
     const patient = await prisma.patient.findUnique({ where: { id: args.patientId } });
     // Não criar renovação se o paciente estiver fechado.
-    if (patient && patient.status !== "FECHADO" && patient.status !== "INATIVO") {
+    if (patient && patient.status !== "FECHADO") {
       await prisma.task.create({
         data: {
           title: `Renovação de plano - ${patient.name}`,

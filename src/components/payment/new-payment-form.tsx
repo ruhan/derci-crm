@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { PatientCombobox } from "@/components/patient/patient-combobox";
 import {
   PAYMENT_METHOD_LABEL,
   PAYMENT_CATEGORY_LABEL,
@@ -32,20 +33,14 @@ export function NewPaymentForm({
       {patientId && <input type="hidden" name="patientId" value={patientId} />}
       {showPatientSelect && (
         <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor="patientId">Paciente (opcional)</Label>
-          <select
-            id="patientId"
-            name="patientId"
-            className="h-12 w-full rounded-lg border-2 border-input bg-background px-4 text-base"
-            defaultValue=""
-          >
-            <option value="">— Sem paciente (livro/palestra) —</option>
-            {patients.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+          <Label htmlFor="patient-payment-combobox">
+            Paciente (deixe vazio para livro/palestra/outro)
+          </Label>
+          <PatientCombobox
+            patients={patients}
+            id="patient-payment-combobox"
+            placeholder="Buscar paciente pelo nome..."
+          />
         </div>
       )}
 

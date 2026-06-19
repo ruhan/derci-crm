@@ -1,27 +1,31 @@
 import { z } from "zod";
 
+export const PATIENT_STATUSES = [
+  "FEZ_PRIMEIRA_SESSAO",
+  "EM_CONVERSACAO",
+  "NAO_FECHOU_FINANCEIRO",
+  "PAROU_DE_RESPONDER",
+  "ATIVO",
+  "FECHADO",
+] as const;
+export type PatientStatusValue = (typeof PATIENT_STATUSES)[number];
+
+export const PATIENT_ORIGINS = [
+  "INDICACAO",
+  "GOOGLE_ADS",
+  "INSTAGRAM",
+  "OUTRO",
+] as const;
+export type PatientOriginValue = (typeof PATIENT_ORIGINS)[number];
+
 export const PatientSchema = z.object({
   name: z.string().min(2, "Nome obrigatório"),
   phone: z.string().min(8, "Telefone obrigatório"),
-  origin: z.enum([
-    "INDICACAO",
-    "GOOGLE_ADS",
-    "INSTAGRAM",
-    "SITE",
-    "WHATSAPP",
-    "OUTRO",
-  ]),
+  origin: z.enum(PATIENT_ORIGINS),
   referrerName: z.string().optional().nullable(),
   referrerNote: z.string().optional().nullable(),
   entryDate: z.string().min(1, "Data de entrada obrigatória"),
-  status: z.enum([
-    "NOVO_CONTATO",
-    "EM_NEGOCIACAO",
-    "ATIVO",
-    "PAUSADO",
-    "FECHADO",
-    "INATIVO",
-  ]),
+  status: z.enum(PATIENT_STATUSES),
   generalHistory: z.string().optional().nullable(),
   internalNotes: z.string().optional().nullable(),
 });
@@ -32,20 +36,23 @@ export const PlanSchema = z.object({
   totalSessions: z.coerce.number().int().refine((n) => [2, 4, 6].includes(n), {
     message: "Plano deve ser de 2, 4 ou 6 sessões",
   }),
-  totalValue: z.coerce.number().nonnegative(),
   startDate: z.string().min(1, "Data de início obrigatória"),
   endDate: z.string().optional().nullable(),
-  status: z
-    .enum(["AGUARDANDO_PAGAMENTO", "ABERTO", "FINALIZADO", "CANCELADO"])
-    .default("AGUARDANDO_PAGAMENTO"),
   notes: z.string().optional().nullable(),
 });
 
 export const AppointmentSchema = z.object({
-  patientId: z.string().min(1),
+  patientId: z.string().min(1, "Selecione um paciente"),
   scheduledAt: z.string().min(1, "Data e hora obrigatórias"),
-  durationMin: z.coerce.number().int().min(10).default(50),
+  durationMin: z.coerce.number().int().min(10).default(90),
   notes: z.string().optional().nullable(),
+});
+
+export const RescheduleAppointmentSchema = z.object({
+  appointmentId: z.string().min(1),
+  scheduledAt: z.string().min(1, "Data e hora obrigatórias"),
+  durationMin: z.coerce.number().int().min(10).default(90),
+  reason: z.string().optional().nullable(),
 });
 
 export const AppointmentStatusSchema = z.object({
@@ -155,5 +162,11 @@ export const ClosePatientSchema = z.object({
 export const ReopenPatientSchema = z.object({
   patientId: z.string().min(1),
   reason: z.string().min(2, "Informe o motivo"),
-  newStatus: z.enum(["ATIVO", "EM_NEGOCIACAO"]),
+  newStatus: z.enum([
+    "FEZ_PRIMEIRA_SESSAO",
+    "EM_CONVERSACAO",
+    "NAO_FECHOU_FINANCEIRO",
+    "PAROU_DE_RESPONDER",
+    "ATIVO",
+  ]),
 });

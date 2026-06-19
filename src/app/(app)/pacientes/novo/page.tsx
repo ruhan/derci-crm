@@ -17,7 +17,7 @@ export default function NewPatientPage({ searchParams }: { searchParams: { err?:
       <PatientForm
         action={createPatientAction}
         initial={{
-          status: "NOVO_CONTATO",
+          status: "EM_CONVERSACAO",
           origin: "INDICACAO",
           entryDate: format(new Date(), "yyyy-MM-dd"),
         }}

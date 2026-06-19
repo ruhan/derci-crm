@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { PatientCombobox } from "@/components/patient/patient-combobox";
 import { TASK_TYPE_LABEL } from "@/lib/format";
 import { createTaskAction } from "@/server/actions/tasks";
 
@@ -59,20 +60,12 @@ export function NewTaskDialog({
             </select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="patientId">Paciente (opcional)</Label>
-            <select
-              id="patientId"
-              name="patientId"
-              className="h-12 w-full rounded-lg border-2 border-input bg-background px-4 text-base"
-              defaultValue=""
-            >
-              <option value="">— Sem paciente —</option>
-              {patients.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+            <Label htmlFor="patient-task-combobox">Paciente (opcional)</Label>
+            <PatientCombobox
+              patients={patients}
+              id="patient-task-combobox"
+              placeholder="Buscar paciente pelo nome..."
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="dueDate">Data prevista</Label>

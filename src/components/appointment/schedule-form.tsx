@@ -5,39 +5,44 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { PatientCombobox } from "@/components/patient/patient-combobox";
 import { createAppointmentAction } from "@/server/actions/appointments";
 
 export function ScheduleAppointmentForm({
   patients,
   defaultPatientId,
   defaultDate,
-  compact = false,
+  // compact é mantido por compatibilidade; hoje o layout é igual nos dois casos.
+  compact: _compact,
 }: {
   patients: { id: string; name: string }[];
   defaultPatientId?: string;
   defaultDate?: string;
   compact?: boolean;
 }) {
+  // Quando há apenas um paciente possível (ex.: detalhe do paciente), mostra
+  // só o nome dele; senão usa o combobox com busca.
+  const fixedSingle = !!defaultPatientId && patients.length === 1;
+  const fixedName = fixedSingle ? patients[0].name : null;
+
   return (
     <form action={createAppointmentAction} className="grid gap-4 sm:grid-cols-2">
-      <div className={compact ? "space-y-2 sm:col-span-2" : "space-y-2 sm:col-span-2"}>
-        <Label htmlFor="patientId">Paciente</Label>
-        <select
-          id="patientId"
-          name="patientId"
-          required
-          defaultValue={defaultPatientId ?? ""}
-          className="h-12 w-full rounded-lg border-2 border-input bg-background px-4 text-base"
-        >
-          <option value="" disabled>
-            Selecione um paciente
-          </option>
-          {patients.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
+      <div className="space-y-2 sm:col-span-2">
+        <Label htmlFor="patient-combobox">Paciente</Label>
+        {fixedSingle ? (
+          <>
+            <input type="hidden" name="patientId" value={defaultPatientId} />
+            <div className="h-12 w-full rounded-lg border-2 border-input bg-muted px-4 text-base flex items-center">
+              {fixedName}
+            </div>
+          </>
+        ) : (
+          <PatientCombobox
+            patients={patients}
+            defaultPatientId={defaultPatientId}
+            required
+          />
+        )}
       </div>
 
       <div className="space-y-2">
@@ -58,7 +63,7 @@ export function ScheduleAppointmentForm({
           type="number"
           min="10"
           step="5"
-          defaultValue={50}
+          defaultValue={90}
           required
         />
       </div>

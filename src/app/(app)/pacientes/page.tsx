@@ -7,18 +7,12 @@ import { Input } from "@/components/ui/input";
 import { PatientStatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { fmtPhone, PATIENT_STATUS_LABEL } from "@/lib/format";
+import { PATIENT_STATUSES } from "@/lib/validations";
 import { Plus, Search, Users } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-const ALL_STATUS = [
-  "NOVO_CONTATO",
-  "EM_NEGOCIACAO",
-  "ATIVO",
-  "PAUSADO",
-  "FECHADO",
-  "INATIVO",
-] as const;
+const ALL_STATUS = PATIENT_STATUSES;
 
 export default async function PatientsPage({
   searchParams,
@@ -30,10 +24,14 @@ export default async function PatientsPage({
 
   const where: any = {};
   if (q) {
-    where.OR = [
+    const digits = q.replace(/\D/g, "");
+    const orClauses: any[] = [
       { name: { contains: q, mode: "insensitive" } },
-      { phone: { contains: q.replace(/\D/g, "") } },
     ];
+    // Só inclui busca por telefone se o usuário digitou números — evita
+    // que `contains: ""` traga todos os pacientes ao buscar pelo nome.
+    if (digits) orClauses.push({ phone: { contains: digits } });
+    where.OR = orClauses;
   }
   if (status && (ALL_STATUS as readonly string[]).includes(status)) where.status = status;
 

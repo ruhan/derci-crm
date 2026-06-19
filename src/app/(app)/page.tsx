@@ -34,7 +34,7 @@ export default async function DashboardPage() {
   const [
     activeCount,
     closedCount,
-    inactiveCount,
+    nonResponsiveCount,
     newWeekCount,
     todayAppts,
     weekAppts,
@@ -49,10 +49,10 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     prisma.patient.count({ where: { status: "ATIVO" } }),
     prisma.patient.count({ where: { status: "FECHADO" } }),
-    prisma.patient.count({ where: { status: "INATIVO" } }),
+    prisma.patient.count({ where: { status: "PAROU_DE_RESPONDER" } }),
     prisma.patient.count({
       where: {
-        status: { in: ["NOVO_CONTATO", "EM_NEGOCIACAO"] },
+        status: { in: ["EM_CONVERSACAO", "FEZ_PRIMEIRA_SESSAO"] },
         entryDate: { gte: weekStart, lte: weekEnd },
       },
     }),
@@ -131,7 +131,11 @@ export default async function DashboardPage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           <StatCard label="Pacientes ativos" value={activeCount} href="/pacientes?status=ATIVO" />
           <StatCard label="Fechados" value={closedCount} href="/pacientes?status=FECHADO" />
-          <StatCard label="Inativos" value={inactiveCount} href="/pacientes?status=INATIVO" />
+          <StatCard
+            label="Pararam de responder"
+            value={nonResponsiveCount}
+            href="/pacientes?status=PAROU_DE_RESPONDER"
+          />
           <StatCard label="Novos contatos da semana" value={newWeekCount} />
           <StatCard label="Sessões hoje" value={todayAppts} href="/agenda?view=dia" />
           <StatCard label="Sessões da semana" value={weekAppts} href="/agenda?view=semana" />

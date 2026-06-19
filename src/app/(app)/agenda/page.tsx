@@ -68,7 +68,7 @@ export default async function AgendaPage({
       orderBy: { scheduledAt: "asc" },
     }),
     prisma.patient.findMany({
-      where: { status: { notIn: ["FECHADO", "INATIVO"] } },
+      where: { status: { not: "FECHADO" } },
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
@@ -119,20 +119,12 @@ export default async function AgendaPage({
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Agendar atendimento</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ScheduleAppointmentForm patients={patients} />
-        </CardContent>
-      </Card>
-
+      {/* Lista de atendimentos do período (primeiro, conforme pedido) */}
       {appts.length === 0 ? (
         <EmptyState
           icon={<Plus className="h-10 w-10" />}
           title="Sem atendimentos no período"
-          description="Use o formulário acima para agendar um atendimento."
+          description="Use o formulário abaixo para agendar um atendimento."
         />
       ) : view === "dia" ? (
         <DayList appts={appts} />
@@ -152,6 +144,16 @@ export default async function AgendaPage({
           ))}
         </div>
       )}
+
+      {/* Cadastrar novo atendimento (vem por último) */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Agendar atendimento</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ScheduleAppointmentForm patients={patients} />
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -172,7 +174,13 @@ function DayList({ appts }: { appts: any[] }) {
           </div>
           <div className="flex items-center gap-2">
             <AppointmentStatusBadge status={a.status} />
-            <AppointmentActions appointmentId={a.id} status={a.status} patientId={a.patientId} />
+            <AppointmentActions
+              appointmentId={a.id}
+              status={a.status}
+              patientId={a.patientId}
+              scheduledAt={a.scheduledAt}
+              durationMin={a.durationMin}
+            />
           </div>
         </li>
       ))}

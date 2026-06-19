@@ -43,22 +43,33 @@ export function onlyDigits(s: string | null | undefined): string {
   return (s ?? "").replace(/\D/g, "");
 }
 
+/**
+ * Constrói um link wa.me para abrir conversa direta no WhatsApp com o telefone.
+ * - Aceita o telefone em qualquer formato; usa só os dígitos.
+ * - Se já tiver 12+ dígitos (com DDI), usa como está; senão prefixa "55" (Brasil).
+ * - Aceita uma mensagem opcional (será URL-encoded).
+ */
+export function whatsappLink(rawPhone: string, message?: string): string {
+  const digits = onlyDigits(rawPhone);
+  const withCountry = digits.length >= 12 ? digits : `55${digits}`;
+  const base = `https://wa.me/${withCountry}`;
+  return message ? `${base}?text=${encodeURIComponent(message)}` : base;
+}
+
 // Mapeamentos de enums para rótulos amigáveis em pt-BR
 export const PATIENT_STATUS_LABEL: Record<string, string> = {
-  NOVO_CONTATO: "Novo contato",
-  EM_NEGOCIACAO: "Em negociação",
+  FEZ_PRIMEIRA_SESSAO: "Fez primeira sessão",
+  EM_CONVERSACAO: "Em conversação",
+  NAO_FECHOU_FINANCEIRO: "Não fechou por questão financeira",
+  PAROU_DE_RESPONDER: "Parou de responder",
   ATIVO: "Ativo",
-  PAUSADO: "Pausado",
   FECHADO: "Fechado",
-  INATIVO: "Inativo",
 };
 
 export const PATIENT_ORIGIN_LABEL: Record<string, string> = {
   INDICACAO: "Indicação",
   GOOGLE_ADS: "Google Ads",
   INSTAGRAM: "Instagram",
-  SITE: "Site",
-  WHATSAPP: "WhatsApp",
   OUTRO: "Outro",
 };
 

@@ -18,13 +18,14 @@ import {
   fmtDateTime,
   fmtPhone,
   formatBRL,
+  whatsappLink,
   PATIENT_ORIGIN_LABEL,
   PAYMENT_METHOD_LABEL,
   TIMELINE_EVENT_LABEL,
   TASK_TYPE_LABEL,
 } from "@/lib/format";
-import { Pencil, Phone, Share2 } from "lucide-react";
-import { NewPlanForm } from "@/components/plan/new-plan-form";
+import { Pencil, MessageCircle, Share2 } from "lucide-react";
+import { NewPlanDialog } from "@/components/plan/new-plan-dialog";
 import { NewPaymentForm } from "@/components/payment/new-payment-form";
 import { ClosePatientButton } from "@/components/patient/close-patient-button";
 import { ReopenPatientButton } from "@/components/patient/reopen-patient-button";
@@ -48,17 +49,17 @@ export default async function PatientPage({ params }: { params: { id: string } }
 
   const activePlan = p.plans.find((pl) => pl.status === "ABERTO") ?? null;
   const remaining = activePlan ? activePlan.totalSessions - activePlan.usedSessions : 0;
-  const isClosed = p.status === "FECHADO" || p.status === "INATIVO";
+  const isClosed = p.status === "FECHADO";
 
   const h = headers();
   const proto = h.get("x-forwarded-proto") ?? "http";
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${proto}://${host}`;
   const shareLink = `${baseUrl}/pacientes/${p.id}`;
-  const waMessage = encodeURIComponent(
+  const waShareHref = `https://wa.me/?text=${encodeURIComponent(
     `Olá, segue o link do paciente ${p.name}: ${shareLink}`
-  );
-  const waHref = `https://wa.me/?text=${waMessage}`;
+  )}`;
+  const waDirectHref = whatsappLink(p.phone);
 
   return (
     <div className="space-y-5">
@@ -73,8 +74,13 @@ export default async function PatientPage({ params }: { params: { id: string } }
               </Link>
             </Button>
             <Button asChild variant="success">
-              <a href={waHref} target="_blank" rel="noreferrer">
-                <Share2 className="h-5 w-5" /> Compartilhar no WhatsApp
+              <a href={waDirectHref} target="_blank" rel="noreferrer">
+                <MessageCircle className="h-5 w-5" /> Mandar WhatsApp
+              </a>
+            </Button>
+            <Button asChild variant="outline">
+              <a href={waShareHref} target="_blank" rel="noreferrer">
+                <Share2 className="h-5 w-5" /> Compartilhar
               </a>
             </Button>
           </div>
@@ -94,8 +100,13 @@ export default async function PatientPage({ params }: { params: { id: string } }
           )}
           <Info label="Data de entrada" value={fmtDate(p.entryDate)} />
           <Info label="Telefone" value={
-            <a href={`tel:${p.phone.replace(/\D/g, "")}`} className="inline-flex items-center gap-1 text-primary underline">
-              <Phone className="h-4 w-4" /> {fmtPhone(p.phone)}
+            <a
+              href={waDirectHref}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 text-primary underline"
+            >
+              <MessageCircle className="h-4 w-4" /> {fmtPhone(p.phone)}
             </a>
           } />
           {p.closedAt && <Info label="Fechado em" value={`${fmtDate(p.closedAt)} - ${p.closedReason ?? ""}`} />}
@@ -117,8 +128,9 @@ export default async function PatientPage({ params }: { params: { id: string } }
 
       {/* Plano atual */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
           <CardTitle>Plano atual</CardTitle>
+          {!isClosed && <NewPlanDialog patientId={p.id} />}
         </CardHeader>
         <CardContent>
           {activePlan ? (
@@ -133,19 +145,12 @@ export default async function PatientPage({ params }: { params: { id: string } }
               <p className="text-base">
                 <strong>{remaining}</strong> de <strong>{activePlan.totalSessions}</strong> sessões disponíveis.
               </p>
-              <p className="text-base">Valor: {formatBRL(activePlan.totalValue.toString())}</p>
             </div>
           ) : (
             <EmptyState
               title="Sem plano ativo"
               description="Crie um plano de 2, 4 ou 6 sessões para liberar atendimentos."
             />
-          )}
-          {!isClosed && (
-            <div className="mt-5 border-t pt-4">
-              <h3 className="text-base font-semibold mb-3">Cadastrar novo plano</h3>
-              <NewPlanForm patientId={p.id} />
-            </div>
           )}
         </CardContent>
       </Card>
@@ -160,9 +165,7 @@ export default async function PatientPage({ params }: { params: { id: string } }
             {p.plans.map((pl) => (
               <div key={pl.id} className="flex items-center justify-between gap-3 border-b last:border-0 py-2">
                 <div>
-                  <p className="font-semibold">
-                    {pl.totalSessions} sessões — {formatBRL(pl.totalValue.toString())}
-                  </p>
+                  <p className="font-semibold">{pl.totalSessions} sessões</p>
                   <p className="text-sm text-muted-foreground">
                     {fmtDate(pl.startDate)} — usadas {pl.usedSessions}/{pl.totalSessions}
                   </p>

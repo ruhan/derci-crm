@@ -24,7 +24,7 @@ export default async function FinMsgPage({ searchParams }: { searchParams: { sta
       orderBy: [{ status: "asc" }, { createdAt: "desc" }],
     }),
     prisma.patient.findMany({
-      where: { status: { notIn: ["INATIVO"] } },
+      where: { status: { not: "FECHADO" } },
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),

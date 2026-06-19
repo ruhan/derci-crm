@@ -31,10 +31,13 @@ export async function createPatientAction(formData: FormData) {
     );
   }
   const data = parsed.data;
+  // Telefone normalizado para apenas dígitos (sem máscara). A formatação
+  // de exibição é responsabilidade da UI (fmtPhone).
+  const phoneDigits = data.phone.replace(/\D/g, "");
   const patient = await prisma.patient.create({
     data: {
       name: data.name.trim(),
-      phone: data.phone.trim(),
+      phone: phoneDigits,
       origin: data.origin,
       referrerName: data.origin === "INDICACAO" ? data.referrerName?.trim() || null : null,
       referrerNote: data.origin === "INDICACAO" ? data.referrerNote?.trim() || null : null,
@@ -55,9 +58,9 @@ export async function createPatientAction(formData: FormData) {
     authorId: user.id,
   });
 
-  // Regra automática: se status for "Em negociação", criar tarefa
+  // Regra automática: se status for "Em conversação", criar tarefa
   // de "Entrar em contato para fechar plano" para a semana corrente.
-  if (data.status === "EM_NEGOCIACAO") {
+  if (data.status === "EM_CONVERSACAO") {
     await prisma.task.create({
       data: {
         title: `Fechar plano com ${patient.name}`,
@@ -99,11 +102,12 @@ export async function updatePatientAction(id: string, formData: FormData) {
   const existing = await prisma.patient.findUnique({ where: { id } });
   if (!existing) redirect("/pacientes?err=Paciente%20n%C3%A3o%20encontrado");
 
+  const phoneDigits = data.phone.replace(/\D/g, "");
   await prisma.patient.update({
     where: { id },
     data: {
       name: data.name.trim(),
-      phone: data.phone.trim(),
+      phone: phoneDigits,
       origin: data.origin,
       referrerName: data.origin === "INDICACAO" ? data.referrerName?.trim() || null : null,
       referrerNote: data.origin === "INDICACAO" ? data.referrerNote?.trim() || null : null,
