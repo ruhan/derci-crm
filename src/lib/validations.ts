@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseBrazilianDateTime } from "@/lib/dates";
 
 export const PATIENT_STATUSES = [
   "FEZ_PRIMEIRA_SESSAO",
@@ -41,16 +42,31 @@ export const PlanSchema = z.object({
   notes: z.string().optional().nullable(),
 });
 
+const scheduledAtBr = z
+  .string()
+  .min(1, "Data e hora obrigatórias")
+  .transform((val, ctx) => {
+    const d = parseBrazilianDateTime(val);
+    if (!d) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Use dd/mm/aaaa HH:MM (minutos apenas :00 ou :30)",
+      });
+      return z.NEVER;
+    }
+    return d.toISOString();
+  });
+
 export const AppointmentSchema = z.object({
   patientId: z.string().min(1, "Selecione um paciente"),
-  scheduledAt: z.string().min(1, "Data e hora obrigatórias"),
+  scheduledAt: scheduledAtBr,
   durationMin: z.coerce.number().int().min(10).default(90),
   notes: z.string().optional().nullable(),
 });
 
 export const RescheduleAppointmentSchema = z.object({
   appointmentId: z.string().min(1),
-  scheduledAt: z.string().min(1, "Data e hora obrigatórias"),
+  scheduledAt: scheduledAtBr,
   durationMin: z.coerce.number().int().min(10).default(90),
   reason: z.string().optional().nullable(),
 });

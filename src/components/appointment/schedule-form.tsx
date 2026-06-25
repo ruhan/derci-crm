@@ -1,11 +1,11 @@
 "use client";
 
-import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PatientCombobox } from "@/components/patient/patient-combobox";
+import { AppointmentDateTimeInput } from "@/components/appointment/appointment-datetime-input";
 
 export function ScheduleAppointmentForm({
   patients,
@@ -50,12 +50,9 @@ export function ScheduleAppointmentForm({
 
       <div className="space-y-2">
         <Label htmlFor="scheduledAt">Data e hora</Label>
-        <Input
+        <AppointmentDateTimeInput
           id="scheduledAt"
-          name="scheduledAt"
-          type="datetime-local"
-          defaultValue={defaultDate ?? format(new Date(), "yyyy-MM-dd'T'HH:mm")}
-          required
+          defaultValue={defaultDate}
           disabled={pending}
         />
       </div>

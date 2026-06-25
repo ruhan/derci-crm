@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -21,7 +21,7 @@ import {
   rescheduleAppointmentAction,
   updateAppointmentStatusAction,
 } from "@/server/actions/appointments";
-import { formatLocalDateTimeInput } from "@/lib/dates";
+import { AppointmentDateTimeInput } from "@/components/appointment/appointment-datetime-input";
 
 export function AppointmentActions({
   appointmentId,
@@ -69,10 +69,6 @@ function RescheduleButton({
   durationMin: number;
 }) {
   const [open, setOpen] = useState(false);
-  const initialDate = useMemo(
-    () => formatLocalDateTimeInput(scheduledAt) || formatLocalDateTimeInput(new Date()),
-    [scheduledAt]
-  );
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -91,12 +87,11 @@ function RescheduleButton({
           <input type="hidden" name="appointmentId" value={appointmentId} />
           <div className="space-y-2">
             <Label htmlFor={`scheduledAt-${appointmentId}`}>Nova data e hora</Label>
-            <Input
+            <AppointmentDateTimeInput
               id={`scheduledAt-${appointmentId}`}
-              name="scheduledAt"
-              type="datetime-local"
-              defaultValue={initialDate}
-              required
+              defaultValue={
+                scheduledAt instanceof Date ? scheduledAt.toISOString() : String(scheduledAt)
+              }
             />
           </div>
           <div className="space-y-2">
