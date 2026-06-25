@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
+import { matchesAccentInsensitive } from "@/lib/utils";
 
 type Option = { id: string; name: string };
 
@@ -36,10 +37,10 @@ export function PatientCombobox({
   const wrapRef = useRef<HTMLDivElement>(null);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = query.trim();
     if (!q) return patients.slice(0, 50);
     return patients
-      .filter((p) => p.name.toLowerCase().includes(q))
+      .filter((p) => matchesAccentInsensitive(p.name, q))
       .slice(0, 50);
   }, [query, patients]);
 

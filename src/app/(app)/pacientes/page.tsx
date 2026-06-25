@@ -8,6 +8,7 @@ import { PatientStatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { fmtPhone, PATIENT_STATUS_LABEL } from "@/lib/format";
 import { PATIENT_STATUSES } from "@/lib/validations";
+import { matchesAccentInsensitive } from "@/lib/utils";
 import { Plus, Search, Users } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -23,26 +24,27 @@ export default async function PatientsPage({
   const status = (searchParams.status ?? "").trim();
 
   const where: any = {};
-  if (q) {
-    const digits = q.replace(/\D/g, "");
-    const orClauses: any[] = [
-      { name: { contains: q, mode: "insensitive" } },
-    ];
-    // Só inclui busca por telefone se o usuário digitou números — evita
-    // que `contains: ""` traga todos os pacientes ao buscar pelo nome.
-    if (digits) orClauses.push({ phone: { contains: digits } });
-    where.OR = orClauses;
-  }
   if (status && (ALL_STATUS as readonly string[]).includes(status)) where.status = status;
 
-  const patients = await prisma.patient.findMany({
+  const digits = q.replace(/\D/g, "");
+
+  let patients = await prisma.patient.findMany({
     where,
     orderBy: [{ status: "asc" }, { name: "asc" }],
     include: {
       plans: { where: { status: "ABERTO" }, take: 1 },
     },
-    take: 200,
   });
+
+  if (q) {
+    patients = patients.filter(
+      (p) =>
+        matchesAccentInsensitive(p.name, q) ||
+        (digits.length > 0 && p.phone.includes(digits))
+    );
+  }
+
+  patients = patients.slice(0, 200);
 
   return (
     <div className="space-y-5">
