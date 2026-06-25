@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Trash2 } from "lucide-react";
 import {
   Dialog,
@@ -27,7 +27,15 @@ export function RemovePlanButton({
   totalSessions: number;
 }) {
   const [open, setOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
   const hasUsedSessions = usedSessions > 0;
+
+  function handleSubmit(formData: FormData) {
+    setOpen(false);
+    startTransition(() => {
+      removePlanAction(formData);
+    });
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -54,17 +62,21 @@ export function RemovePlanButton({
             )}
           </DialogDescription>
         </DialogHeader>
-        <form action={removePlanAction} className="space-y-4">
+        <form action={handleSubmit} className="space-y-4">
           <input type="hidden" name="planId" value={planId} />
           <input type="hidden" name="patientId" value={patientId} />
           <DialogFooter>
             <DialogClose asChild>
-              <Button type="button" variant="ghost" size="lg">
+              <Button type="button" variant="ghost" size="lg" disabled={pending}>
                 Voltar
               </Button>
             </DialogClose>
-            <Button type="submit" variant="destructive" size="lg">
-              {hasUsedSessions ? "Cancelar plano" : "Sim, remover plano"}
+            <Button type="submit" variant="destructive" size="lg" disabled={pending}>
+              {pending
+                ? "Removendo..."
+                : hasUsedSessions
+                  ? "Cancelar plano"
+                  : "Sim, remover plano"}
             </Button>
           </DialogFooter>
         </form>
