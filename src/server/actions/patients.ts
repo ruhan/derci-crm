@@ -10,7 +10,6 @@ import {
   ReopenPatientSchema,
 } from "@/lib/validations";
 import { logTimelineEvent } from "@/server/timeline";
-import { getWeekStart } from "@/lib/week";
 
 function fdToObj(fd: FormData): Record<string, any> {
   const obj: Record<string, any> = {};
@@ -58,31 +57,7 @@ export async function createPatientAction(formData: FormData) {
     authorId: user.id,
   });
 
-  // Regra automática: se status for "Em conversação", criar tarefa
-  // de "Entrar em contato para fechar plano" para a semana corrente.
-  if (data.status === "EM_CONVERSACAO") {
-    await prisma.task.create({
-      data: {
-        title: `Fechar plano com ${patient.name}`,
-        type: "CONTATO_FECHAR_PLANO",
-        description: `Novo contato em negociação. Telefone: ${patient.phone}.`,
-        patientId: patient.id,
-        weekStart: getWeekStart(),
-        status: "A_FAZER",
-        createdById: user.id,
-        assigneeId: user.id,
-      },
-    });
-    await logTimelineEvent({
-      patientId: patient.id,
-      type: "TAREFA_CRIADA",
-      title: "Tarefa de contato criada",
-      authorId: user.id,
-    });
-  }
-
   revalidatePath("/pacientes");
-  revalidatePath("/tarefas");
   revalidatePath("/");
   redirect(`/pacientes/${patient.id}?ok=${encodeURIComponent("Paciente salvo com sucesso")}`);
 }
