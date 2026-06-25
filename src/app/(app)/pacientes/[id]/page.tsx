@@ -29,6 +29,7 @@ import { NewPlanDialog } from "@/components/plan/new-plan-dialog";
 import { NewPaymentForm } from "@/components/payment/new-payment-form";
 import { ClosePatientButton } from "@/components/patient/close-patient-button";
 import { ReopenPatientButton } from "@/components/patient/reopen-patient-button";
+import { DeletePatientButton } from "@/components/patient/delete-patient-button";
 import { ScheduleAppointmentDialog } from "@/components/appointment/schedule-dialog";
 
 export const dynamic = "force-dynamic";
@@ -329,13 +330,14 @@ export default async function PatientPage({ params }: { params: { id: string } }
         </CardContent>
       </Card>
 
-      {/* Fechar / reabrir */}
+      {/* Fechar / reabrir / excluir */}
       <Card>
         <CardHeader>
-          <CardTitle>{isClosed ? "Reabrir paciente" : "Encerrar acompanhamento"}</CardTitle>
+          <CardTitle>Ações do prontuário</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center">
           {isClosed ? <ReopenPatientButton patientId={p.id} /> : <ClosePatientButton patientId={p.id} />}
+          <DeletePatientButton patientId={p.id} patientName={p.name} />
         </CardContent>
       </Card>
     </div>

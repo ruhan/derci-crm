@@ -196,3 +196,54 @@ export async function reopenPatientAction(formData: FormData) {
   revalidatePath("/pacientes");
   redirect(`/pacientes/${patientId}?ok=${encodeURIComponent("Paciente reaberto")}`);
 }
+
+export async function deletePatientAction(formData: FormData) {
+  await requireUser();
+  const patientId = String(formData.get("patientId") ?? "").trim();
+  if (!patientId) {
+    redirect("/pacientes?err=Paciente%20n%C3%A3o%20informado");
+  }
+
+  const patient = await prisma.patient.findUnique({
+    where: { id: patientId },
+    select: { id: true, name: true },
+  });
+  if (!patient) {
+    redirect("/pacientes?err=Paciente%20n%C3%A3o%20encontrado");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    const plans = await tx.treatmentPlan.findMany({
+      where: { patientId },
+      select: { id: true },
+    });
+    const planIds = plans.map((pl) => pl.id);
+
+    const payments = await tx.payment.findMany({
+      where: {
+        OR: [{ patientId }, ...(planIds.length ? [{ planId: { in: planIds } }] : [])],
+      },
+      select: { id: true },
+    });
+    const paymentIds = payments.map((pay) => pay.id);
+
+    if (paymentIds.length > 0) {
+      await tx.financialTransaction.deleteMany({
+        where: { paymentId: { in: paymentIds } },
+      });
+      await tx.payment.deleteMany({ where: { id: { in: paymentIds } } });
+    }
+
+    await tx.financialTransaction.deleteMany({ where: { patientId } });
+    await tx.task.deleteMany({ where: { patientId } });
+    await tx.financeMessage.deleteMany({ where: { patientId } });
+    await tx.patient.delete({ where: { id: patientId } });
+  });
+
+  revalidatePath("/pacientes");
+  revalidatePath("/");
+  revalidatePath("/financeiro");
+  revalidatePath("/tarefas");
+  revalidatePath("/agenda");
+  redirect(`/pacientes?ok=${encodeURIComponent(`Paciente "${patient.name}" excluído`)}`);
+}
