@@ -26,6 +26,7 @@ import {
 } from "@/lib/format";
 import { Pencil, MessageCircle, Share2 } from "lucide-react";
 import { NewPlanDialog } from "@/components/plan/new-plan-dialog";
+import { RemovePlanButton } from "@/components/plan/remove-plan-button";
 import { NewPaymentForm } from "@/components/payment/new-payment-form";
 import { ClosePatientButton } from "@/components/patient/close-patient-button";
 import { ReopenPatientButton } from "@/components/patient/reopen-patient-button";
@@ -131,21 +132,33 @@ export default async function PatientPage({ params }: { params: { id: string } }
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-3">
           <CardTitle>Plano atual</CardTitle>
-          {!isClosed && <NewPlanDialog patientId={p.id} />}
+          {!isClosed && (
+            <NewPlanDialog patientId={p.id} hasActivePlan={!!activePlan} />
+          )}
         </CardHeader>
         <CardContent>
           {activePlan ? (
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-3">
-                <PlanStatusBadge status={activePlan.status} />
-                <span className="text-lg font-semibold">{activePlan.totalSessions} sessões</span>
-                <span className="text-base text-muted-foreground">
-                  Iniciado em {fmtDate(activePlan.startDate)}
-                </span>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-3">
+                  <PlanStatusBadge status={activePlan.status} />
+                  <span className="text-lg font-semibold">{activePlan.totalSessions} sessões</span>
+                  <span className="text-base text-muted-foreground">
+                    Iniciado em {fmtDate(activePlan.startDate)}
+                  </span>
+                </div>
+                <p className="text-base">
+                  Faltam <strong>{remaining}</strong> de <strong>{activePlan.totalSessions}</strong> sessões disponíveis.
+                </p>
               </div>
-              <p className="text-base">
-                Faltam <strong>{remaining}</strong> de <strong>{activePlan.totalSessions}</strong> sessões disponíveis.
-              </p>
+              {!isClosed && (
+                <RemovePlanButton
+                  planId={activePlan.id}
+                  patientId={p.id}
+                  usedSessions={activePlan.usedSessions}
+                  totalSessions={activePlan.totalSessions}
+                />
+              )}
             </div>
           ) : (
             <EmptyState

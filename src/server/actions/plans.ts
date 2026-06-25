@@ -27,6 +27,17 @@ export async function createPlanAction(formData: FormData) {
   }
   const data = parsed.data;
 
+  const existingOpen = await prisma.treatmentPlan.findFirst({
+    where: { patientId: data.patientId, status: "ABERTO" },
+  });
+  if (existingOpen) {
+    redirect(
+      `/pacientes/${data.patientId}?err=${encodeURIComponent(
+        "Este paciente já possui um plano ativo. Remova ou finalize o plano atual antes de criar outro."
+      )}`
+    );
+  }
+
   // O plano agora é independente de pagamento. Já nasce ABERTO; o
   // pagamento (TERAPIA) será associado depois pelo financeiro.
   const plan = await prisma.treatmentPlan.create({
@@ -72,6 +83,76 @@ export async function cancelPlanAction(planId: string) {
     authorId: user.id,
   });
   revalidatePath(`/pacientes/${plan.patientId}`);
+}
+
+export async function removePlanAction(formData: FormData) {
+  const user = await requireUser();
+  const planId = String(formData.get("planId") ?? "").trim();
+  const patientId = String(formData.get("patientId") ?? "").trim();
+
+  const plan = await prisma.treatmentPlan.findUnique({ where: { id: planId } });
+  if (!plan || plan.patientId !== patientId) {
+    redirect(
+      `/pacientes/${patientId || ""}?err=${encodeURIComponent("Plano não encontrado")}`
+    );
+  }
+
+  if (plan.usedSessions > 0) {
+    await prisma.treatmentPlan.update({
+      where: { id: planId },
+      data: { status: "CANCELADO", endDate: new Date() },
+    });
+    await logTimelineEvent({
+      patientId: plan.patientId,
+      type: "PLANO_CANCELADO",
+      title: "Plano cancelado",
+      description: `${plan.usedSessions} de ${plan.totalSessions} sessões já haviam sido utilizadas.`,
+      refId: plan.id,
+      authorId: user.id,
+    });
+    revalidatePath(`/pacientes/${plan.patientId}`);
+    redirect(
+      `/pacientes/${plan.patientId}?ok=${encodeURIComponent("Plano cancelado")}`
+    );
+  }
+
+  await prisma.$transaction(async (tx) => {
+    const payments = await tx.payment.findMany({
+      where: { planId },
+      select: { id: true },
+    });
+    const paymentIds = payments.map((p) => p.id);
+
+    if (paymentIds.length > 0) {
+      await tx.financialTransaction.deleteMany({
+        where: { paymentId: { in: paymentIds } },
+      });
+      await tx.payment.deleteMany({ where: { id: { in: paymentIds } } });
+    }
+
+    await tx.appointment.updateMany({
+      where: { planId },
+      data: { planId: null },
+    });
+    await tx.session.updateMany({
+      where: { planId },
+      data: { planId: null },
+    });
+    await tx.treatmentPlan.delete({ where: { id: planId } });
+  });
+
+  await logTimelineEvent({
+    patientId: plan.patientId,
+    type: "PLANO_CANCELADO",
+    title: "Plano removido",
+    description: `Plano de ${plan.totalSessions} sessões excluído (nenhuma sessão utilizada).`,
+    refId: plan.id,
+    authorId: user.id,
+  });
+
+  revalidatePath(`/pacientes/${plan.patientId}`);
+  revalidatePath("/financeiro");
+  redirect(`/pacientes/${plan.patientId}?ok=${encodeURIComponent("Plano removido")}`);
 }
 
 /**

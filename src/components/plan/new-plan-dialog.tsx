@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { format } from "date-fns";
 import { Plus } from "lucide-react";
 import {
@@ -26,8 +26,26 @@ const PLAN_OPTIONS = [
   { value: 6, label: "Plano de 6 sessões" },
 ];
 
-export function NewPlanDialog({ patientId }: { patientId: string }) {
+export function NewPlanDialog({
+  patientId,
+  hasActivePlan = false,
+}: {
+  patientId: string;
+  /** Quando true, o botão não é exibido (paciente já tem plano ABERTO). */
+  hasActivePlan?: boolean;
+}) {
   const [open, setOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
+
+  if (hasActivePlan) return null;
+
+  function handleSubmit(formData: FormData) {
+    setOpen(false);
+    startTransition(() => {
+      createPlanAction(formData);
+    });
+  }
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -43,7 +61,7 @@ export function NewPlanDialog({ patientId }: { patientId: string }) {
             separadamente em Financeiro.
           </DialogDescription>
         </DialogHeader>
-        <form action={createPlanAction} className="space-y-4">
+        <form action={handleSubmit} className="space-y-4">
           <input type="hidden" name="patientId" value={patientId} />
 
           <div className="space-y-2">
@@ -54,6 +72,7 @@ export function NewPlanDialog({ patientId }: { patientId: string }) {
               defaultValue={4}
               className="h-12 w-full rounded-lg border-2 border-input bg-background px-4 text-base"
               required
+              disabled={pending}
             >
               {PLAN_OPTIONS.map((p) => (
                 <option key={p.value} value={p.value}>
@@ -71,22 +90,23 @@ export function NewPlanDialog({ patientId }: { patientId: string }) {
               type="date"
               defaultValue={format(new Date(), "yyyy-MM-dd")}
               required
+              disabled={pending}
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="notes">Observações (opcional)</Label>
-            <Textarea id="notes" name="notes" rows={2} />
+            <Textarea id="notes" name="notes" rows={2} disabled={pending} />
           </div>
 
           <DialogFooter>
             <DialogClose asChild>
-              <Button type="button" variant="ghost" size="lg">
+              <Button type="button" variant="ghost" size="lg" disabled={pending}>
                 Cancelar
               </Button>
             </DialogClose>
-            <Button type="submit" size="lg">
-              Criar plano
+            <Button type="submit" size="lg" disabled={pending}>
+              {pending ? "Criando..." : "Criar plano"}
             </Button>
           </DialogFooter>
         </form>
