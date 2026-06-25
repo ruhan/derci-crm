@@ -32,6 +32,7 @@ import { ClosePatientButton } from "@/components/patient/close-patient-button";
 import { ReopenPatientButton } from "@/components/patient/reopen-patient-button";
 import { DeletePatientButton } from "@/components/patient/delete-patient-button";
 import { ScheduleAppointmentDialog } from "@/components/appointment/schedule-dialog";
+import { DeleteSessionButton } from "@/components/session/delete-session-button";
 
 export const dynamic = "force-dynamic";
 
@@ -40,11 +41,15 @@ export default async function PatientPage({ params }: { params: { id: string } }
     where: { id: params.id },
     include: {
       plans: { orderBy: { startDate: "desc" } },
-      appointments: { orderBy: { scheduledAt: "desc" }, take: 30 },
+      appointments: {
+        orderBy: { scheduledAt: "desc" },
+        take: 30,
+        include: { session: true },
+      },
       payments: { orderBy: { paidAt: "desc" }, take: 30 },
       tasks: { orderBy: { weekStart: "desc" }, take: 30 },
       timeline: { orderBy: { occurredAt: "desc" }, take: 50, include: { author: true } },
-      sessions: { orderBy: { occurredAt: "desc" }, take: 20 },
+      sessions: { orderBy: { occurredAt: "desc" } },
     },
   });
   if (!p) notFound();
@@ -208,18 +213,69 @@ export default async function PatientPage({ params }: { params: { id: string } }
           ) : (
             <ul className="divide-y">
               {p.appointments.map((a) => (
-                <li key={a.id} className="py-3 flex items-center justify-between gap-3">
+                <li key={a.id} className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
                     <p className="font-medium">{fmtDateTime(a.scheduledAt)} ({a.durationMin} min)</p>
                     {a.notes && (
                       <p className="text-sm text-muted-foreground">{a.notes}</p>
                     )}
+                    {a.session?.summary && (
+                      <p className="text-sm text-muted-foreground mt-1">{a.session.summary}</p>
+                    )}
                   </div>
-                  <AppointmentStatusBadge status={a.status} />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <AppointmentStatusBadge status={a.status} />
+                    {a.status === "REALIZADO" && (
+                      <DeleteSessionButton
+                        sessionId={a.session?.id}
+                        appointmentId={a.id}
+                        patientId={p.id}
+                        occurredAtLabel={fmtDateTime(a.scheduledAt)}
+                        returnTo={`/pacientes/${p.id}`}
+                      />
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Sessões realizadas */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Sessões realizadas</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {p.sessions.length === 0 ? (
+            <p className="text-base text-muted-foreground">Ainda não há sessões registradas.</p>
+          ) : (
+            <ul className="space-y-3">
+              {p.sessions.map((s) => (
+                <li key={s.id} className="border-l-4 border-success pl-3 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground">{fmtDateTime(s.occurredAt)}</p>
+                    {s.summary ? (
+                      <p className="whitespace-pre-wrap text-base">{s.summary}</p>
+                    ) : (
+                      <p className="text-base text-muted-foreground italic">Sem descrição</p>
+                    )}
+                  </div>
+                  <DeleteSessionButton
+                    sessionId={s.id}
+                    appointmentId={s.appointmentId}
+                    patientId={p.id}
+                    occurredAtLabel={fmtDateTime(s.occurredAt)}
+                    returnTo={`/pacientes/${p.id}`}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="mt-4 text-xs text-muted-foreground">
+            Aviso: a descrição deve ser breve e objetiva. Evite registrar dados clínicos sensíveis no MVP.
+          </p>
         </CardContent>
       </Card>
 
@@ -316,30 +372,6 @@ export default async function PatientPage({ params }: { params: { id: string } }
               ))}
             </ol>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Sessões realizadas (descrição breve) */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Sessões realizadas</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {p.sessions.length === 0 ? (
-            <p className="text-base text-muted-foreground">Ainda não há sessões registradas.</p>
-          ) : (
-            <ul className="space-y-3">
-              {p.sessions.map((s) => (
-                <li key={s.id} className="border-l-4 border-success pl-3">
-                  <p className="text-sm text-muted-foreground">{fmtDateTime(s.occurredAt)}</p>
-                  <p className="whitespace-pre-wrap text-base">{s.summary}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-          <p className="mt-4 text-xs text-muted-foreground">
-            Aviso: a descrição deve ser breve e objetiva. Evite registrar dados clínicos sensíveis no MVP.
-          </p>
         </CardContent>
       </Card>
 

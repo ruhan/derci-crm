@@ -18,8 +18,10 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { AppointmentStatusBadge } from "@/components/ui/status-badge";
 import { fmtDateTime, fmtTime } from "@/lib/format";
+import { parseAgendaDateParam, safeFormat } from "@/lib/dates";
 import { getWeekStart, getWeekEnd, formatWeekRange } from "@/lib/week";
 import { ScheduleAppointmentDialog } from "@/components/appointment/schedule-dialog";
+import { DeleteSessionButton } from "@/components/session/delete-session-button";
 import { AppointmentActions } from "@/components/appointment/appointment-actions";
 import { EmptyState } from "@/components/ui/empty-state";
 
@@ -33,7 +35,7 @@ export default async function AgendaPage({
   searchParams: { view?: string; date?: string };
 }) {
   const view: View = (searchParams.view as View) || "semana";
-  const baseDate = searchParams.date ? parseISO(searchParams.date) : new Date();
+  const baseDate = parseAgendaDateParam(searchParams.date);
 
   let from: Date;
   let to: Date;
@@ -64,7 +66,7 @@ export default async function AgendaPage({
   const [appts, patients] = await Promise.all([
     prisma.appointment.findMany({
       where: { scheduledAt: { gte: from, lte: to } },
-      include: { patient: true, plan: true },
+      include: { patient: true, plan: true, session: true },
       orderBy: { scheduledAt: "asc" },
     }),
     prisma.patient.findMany({
@@ -81,6 +83,7 @@ export default async function AgendaPage({
     (groupByDay[k] ||= []).push(a);
   }
   const days = Object.keys(groupByDay).sort();
+  const agendaReturnTo = `/agenda?view=${view}&date=${format(baseDate, "yyyy-MM-dd")}`;
 
   return (
     <div className="space-y-5">
@@ -130,18 +133,18 @@ export default async function AgendaPage({
           description='Toque em "Agendar atendimento" no topo para criar um novo.'
         />
       ) : view === "dia" ? (
-        <DayList appts={appts} />
+        <DayList appts={appts} agendaReturnTo={agendaReturnTo} />
       ) : (
         <div className="space-y-3">
           {days.map((d) => (
             <Card key={d}>
               <CardHeader>
                 <CardTitle className="text-lg capitalize">
-                  {format(parseISO(d), "EEEE, dd/MM", { locale: ptBR })}
+                  {safeFormat(parseISO(d), "EEEE, dd/MM", { locale: ptBR })}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <DayList appts={groupByDay[d]} />
+                <DayList appts={groupByDay[d]} agendaReturnTo={agendaReturnTo} />
               </CardContent>
             </Card>
           ))}
@@ -151,7 +154,7 @@ export default async function AgendaPage({
   );
 }
 
-function DayList({ appts }: { appts: any[] }) {
+function DayList({ appts, agendaReturnTo }: { appts: any[]; agendaReturnTo: string }) {
   return (
     <ul className="divide-y">
       {appts.map((a) => (
@@ -165,8 +168,16 @@ function DayList({ appts }: { appts: any[] }) {
             </p>
             {a.notes && <p className="text-sm">{a.notes}</p>}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <AppointmentStatusBadge status={a.status} />
+            <DeleteSessionButton
+              sessionId={a.session?.id}
+              appointmentId={a.id}
+              patientId={a.patientId}
+              occurredAtLabel={fmtDateTime(a.scheduledAt)}
+              returnTo={agendaReturnTo}
+              fromAgenda
+            />
             <AppointmentActions
               appointmentId={a.id}
               status={a.status}

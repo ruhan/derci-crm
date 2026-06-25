@@ -6,18 +6,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PatientCombobox } from "@/components/patient/patient-combobox";
-import { createAppointmentAction } from "@/server/actions/appointments";
 
 export function ScheduleAppointmentForm({
   patients,
   defaultPatientId,
   defaultDate,
+  action,
+  pending = false,
   // compact é mantido por compatibilidade; hoje o layout é igual nos dois casos.
   compact: _compact,
 }: {
   patients: { id: string; name: string }[];
   defaultPatientId?: string;
   defaultDate?: string;
+  action: (formData: FormData) => void;
+  pending?: boolean;
   compact?: boolean;
 }) {
   // Quando há apenas um paciente possível (ex.: detalhe do paciente), mostra
@@ -26,7 +29,7 @@ export function ScheduleAppointmentForm({
   const fixedName = fixedSingle ? patients[0].name : null;
 
   return (
-    <form action={createAppointmentAction} className="grid gap-4 sm:grid-cols-2">
+    <form action={action} className="grid gap-4 sm:grid-cols-2">
       <div className="space-y-2 sm:col-span-2">
         <Label htmlFor="patient-combobox">Paciente</Label>
         {fixedSingle ? (
@@ -53,6 +56,7 @@ export function ScheduleAppointmentForm({
           type="datetime-local"
           defaultValue={defaultDate ?? format(new Date(), "yyyy-MM-dd'T'HH:mm")}
           required
+          disabled={pending}
         />
       </div>
       <div className="space-y-2">
@@ -65,17 +69,18 @@ export function ScheduleAppointmentForm({
           step="5"
           defaultValue={90}
           required
+          disabled={pending}
         />
       </div>
 
       <div className="space-y-2 sm:col-span-2">
         <Label htmlFor="notes">Observações (opcional)</Label>
-        <Textarea id="notes" name="notes" rows={2} />
+        <Textarea id="notes" name="notes" rows={2} disabled={pending} />
       </div>
 
       <div className="sm:col-span-2 flex justify-end">
-        <Button size="lg" type="submit">
-          Agendar atendimento
+        <Button size="lg" type="submit" disabled={pending}>
+          {pending ? "Agendando..." : "Agendar atendimento"}
         </Button>
       </div>
     </form>

@@ -36,6 +36,10 @@ export function FlashMessages() {
     const params = new URLSearchParams(sp.toString());
     params.delete("ok");
     params.delete("err");
+    const date = params.get("date");
+    if (date && date.length > 10) {
+      params.set("date", date.slice(0, 10));
+    }
     const qs = params.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }, [sp, pathname, router]);

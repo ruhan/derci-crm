@@ -11,6 +11,7 @@ import {
 } from "@/lib/validations";
 import { consumeSessionFromActivePlan } from "@/server/actions/plans";
 import { logTimelineEvent } from "@/server/timeline";
+import { redirectWithFlash, parseReturnTo } from "@/lib/url";
 
 function fdToObj(fd: FormData) {
   const obj: Record<string, any> = {};
@@ -80,11 +81,7 @@ export async function updateAppointmentStatusAction(formData: FormData) {
         `/agenda?err=${encodeURIComponent("Este atendimento já foi marcado como realizado")}`
       );
     }
-    if (!summary || summary.trim().length < 2) {
-      redirect(
-        `/agenda?err=${encodeURIComponent("Descreva brevemente o atendimento")}`
-      );
-    }
+    const summaryText = summary?.trim() ?? "";
     try {
       const plan = await consumeSessionFromActivePlan({
         patientId: appt!.patientId,
@@ -98,7 +95,7 @@ export async function updateAppointmentStatusAction(formData: FormData) {
         if (appt!.session) {
           await tx.session.update({
             where: { id: appt!.session.id },
-            data: { summary: summary!.trim(), planId: plan.id },
+            data: { summary: summaryText, planId: plan.id },
           });
         } else {
           await tx.session.create({
@@ -108,7 +105,7 @@ export async function updateAppointmentStatusAction(formData: FormData) {
               appointmentId: appointmentId,
               occurredAt: appt!.scheduledAt,
               durationMin: appt!.durationMin,
-              summary: summary!.trim(),
+              summary: summaryText,
               createdById: user.id,
             },
           });
@@ -118,7 +115,7 @@ export async function updateAppointmentStatusAction(formData: FormData) {
         patientId: appt!.patientId,
         type: "SESSAO_REALIZADA",
         title: "Sessão realizada",
-        description: summary!.trim().slice(0, 240),
+        description: summaryText ? summaryText.slice(0, 240) : null,
         refId: appointmentId,
         authorId: user.id,
       });
@@ -207,9 +204,145 @@ export async function rescheduleAppointmentAction(formData: FormData) {
 
 export async function deleteAppointmentAction(appointmentId: string) {
   await requireUser();
-  const appt = await prisma.appointment.findUnique({ where: { id: appointmentId } });
+  const appt = await prisma.appointment.findUnique({
+    where: { id: appointmentId },
+    include: { session: true },
+  });
   if (!appt) return;
   await prisma.appointment.delete({ where: { id: appointmentId } });
   revalidatePath("/agenda");
   revalidatePath(`/pacientes/${appt.patientId}`);
+}
+
+export async function deleteSessionAction(formData: FormData) {
+  const user = await requireUser();
+  const sessionId = String(formData.get("sessionId") ?? "").trim();
+  const appointmentId = String(formData.get("appointmentId") ?? "").trim();
+  const patientId = String(formData.get("patientId") ?? "").trim();
+  const returnToRaw = String(formData.get("returnTo") ?? "").trim();
+  const returnTo = parseReturnTo(returnToRaw, `/pacientes/${patientId}`);
+
+  if (!patientId) {
+    redirectWithFlash("/agenda", "err", "Paciente inválido");
+  }
+
+  let session =
+    sessionId
+      ? await prisma.session.findUnique({
+          where: { id: sessionId },
+          include: { appointment: true },
+        })
+      : null;
+
+  if (!session && appointmentId) {
+    session = await prisma.session.findUnique({
+      where: { appointmentId },
+      include: { appointment: true },
+    });
+  }
+
+  if (session) {
+    if (session.patientId !== patientId) {
+      redirectWithFlash(returnTo, "err", "Sessão não encontrada");
+    }
+
+    await prisma.$transaction(async (tx) => {
+      if (session!.planId) {
+        await restorePlanSession(tx, session!.planId, patientId);
+      }
+
+      if (session!.appointmentId) {
+        await tx.appointment.update({
+          where: { id: session!.appointmentId },
+          data: {
+            status: "AGENDADO",
+            planId: session!.planId ?? session!.appointment?.planId ?? null,
+          },
+        });
+      }
+
+      await tx.session.delete({ where: { id: session!.id } });
+    });
+
+    await logTimelineEvent({
+      patientId,
+      type: "STATUS_ALTERADO",
+      title: "Sessão apagada",
+      description: "Registro de sessão removido. Saldo do plano restaurado.",
+      refId: session.appointmentId ?? session.id,
+      authorId: user.id,
+    });
+
+    revalidatePath(`/pacientes/${patientId}`);
+    revalidatePath("/agenda");
+    revalidatePath("/");
+    redirectWithFlash(returnTo, "ok", "Sessão apagada");
+  }
+
+  if (!appointmentId) {
+    redirectWithFlash(returnTo, "err", "Sessão não encontrada");
+  }
+
+  const appt = await prisma.appointment.findUnique({
+    where: { id: appointmentId },
+    include: { session: true },
+  });
+  if (!appt || appt.patientId !== patientId) {
+    redirectWithFlash(returnTo, "err", "Atendimento não encontrado");
+  }
+
+  if (appt.status === "REALIZADO") {
+    await prisma.$transaction(async (tx) => {
+      if (appt.planId) {
+        await restorePlanSession(tx, appt.planId, patientId);
+      }
+      await tx.appointment.update({
+        where: { id: appointmentId },
+        data: { status: "AGENDADO" },
+      });
+    });
+
+    await logTimelineEvent({
+      patientId,
+      type: "STATUS_ALTERADO",
+      title: "Sessão apagada",
+      description: "Atendimento desfeito. Saldo do plano restaurado.",
+      refId: appointmentId,
+      authorId: user.id,
+    });
+  } else {
+    await prisma.appointment.delete({ where: { id: appointmentId } });
+
+    await logTimelineEvent({
+      patientId,
+      type: "STATUS_ALTERADO",
+      title: "Atendimento removido",
+      description: "Atendimento removido da agenda.",
+      refId: appointmentId,
+      authorId: user.id,
+    });
+  }
+
+  revalidatePath(`/pacientes/${patientId}`);
+  revalidatePath("/agenda");
+  revalidatePath("/");
+  redirectWithFlash(returnTo, "ok", "Sessão apagada");
+}
+
+async function restorePlanSession(
+  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  planId: string,
+  patientId: string
+) {
+  const plan = await tx.treatmentPlan.findUnique({ where: { id: planId } });
+  if (!plan || plan.patientId !== patientId) return;
+  const newUsed = Math.max(0, plan.usedSessions - 1);
+  const shouldReopen = newUsed < plan.totalSessions && plan.status === "FINALIZADO";
+  await tx.treatmentPlan.update({
+    where: { id: plan.id },
+    data: {
+      usedSessions: newUsed,
+      ...(shouldReopen ? { status: "ABERTO", endDate: null } : {}),
+    },
+  });
 }

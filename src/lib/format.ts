@@ -1,5 +1,6 @@
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toValidDate } from "@/lib/dates";
 
 export function formatBRL(value: number | string | null | undefined): string {
   if (value === null || value === undefined || value === "") return "R$ 0,00";
@@ -13,23 +14,27 @@ export function formatBRL(value: number | string | null | undefined): string {
 }
 
 export function fmtDate(value: Date | string | null | undefined): string {
-  if (!value) return "";
-  return format(new Date(value), "dd/MM/yyyy", { locale: ptBR });
+  const d = toValidDate(value);
+  if (!d) return "";
+  return format(d, "dd/MM/yyyy", { locale: ptBR });
 }
 
 export function fmtDateTime(value: Date | string | null | undefined): string {
-  if (!value) return "";
-  return format(new Date(value), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+  const d = toValidDate(value);
+  if (!d) return "";
+  return format(d, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
 }
 
 export function fmtTime(value: Date | string | null | undefined): string {
-  if (!value) return "";
-  return format(new Date(value), "HH:mm", { locale: ptBR });
+  const d = toValidDate(value);
+  if (!d) return "";
+  return format(d, "HH:mm", { locale: ptBR });
 }
 
 export function fmtRelative(value: Date | string | null | undefined): string {
-  if (!value) return "";
-  return formatDistanceToNow(new Date(value), { locale: ptBR, addSuffix: true });
+  const d = toValidDate(value);
+  if (!d) return "";
+  return formatDistanceToNow(d, { locale: ptBR, addSuffix: true });
 }
 
 export function fmtPhone(raw: string): string {

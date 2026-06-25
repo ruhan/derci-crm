@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { format } from "date-fns";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +21,7 @@ import {
   rescheduleAppointmentAction,
   updateAppointmentStatusAction,
 } from "@/server/actions/appointments";
+import { formatLocalDateTimeInput } from "@/lib/dates";
 
 export function AppointmentActions({
   appointmentId,
@@ -69,7 +69,10 @@ function RescheduleButton({
   durationMin: number;
 }) {
   const [open, setOpen] = useState(false);
-  const initialDate = format(new Date(scheduledAt), "yyyy-MM-dd'T'HH:mm");
+  const initialDate = useMemo(
+    () => formatLocalDateTimeInput(scheduledAt) || formatLocalDateTimeInput(new Date()),
+    [scheduledAt]
+  );
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -141,15 +144,16 @@ function CompleteButton({ appointmentId }: { appointmentId: string }) {
         <DialogHeader>
           <DialogTitle>Sessão realizada</DialogTitle>
           <DialogDescription>
-            Escreva uma descrição breve do atendimento. Evite registrar dados clínicos sensíveis.
+            Você pode adicionar uma descrição breve do atendimento (opcional). Evite
+            registrar dados clínicos sensíveis.
           </DialogDescription>
         </DialogHeader>
         <form action={updateAppointmentStatusAction} className="space-y-4">
           <input type="hidden" name="appointmentId" value={appointmentId} />
           <input type="hidden" name="status" value="REALIZADO" />
           <div className="space-y-2">
-            <Label htmlFor={`summary-${appointmentId}`}>Descrição breve</Label>
-            <Textarea id={`summary-${appointmentId}`} name="summary" rows={4} required />
+            <Label htmlFor={`summary-${appointmentId}`}>Descrição breve (opcional)</Label>
+            <Textarea id={`summary-${appointmentId}`} name="summary" rows={4} />
           </div>
           <DialogFooter>
             <DialogClose asChild>

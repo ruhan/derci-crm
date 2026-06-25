@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Plus } from "lucide-react";
 import {
   Dialog,
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScheduleAppointmentForm } from "@/components/appointment/schedule-form";
+import { createAppointmentAction } from "@/server/actions/appointments";
 
 export function ScheduleAppointmentDialog({
   patients,
@@ -27,6 +28,15 @@ export function ScheduleAppointmentDialog({
   triggerSize?: "sm" | "lg" | "default" | "icon";
 }) {
   const [open, setOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
+
+  function handleSubmit(formData: FormData) {
+    setOpen(false);
+    startTransition(() => {
+      createAppointmentAction(formData);
+    });
+  }
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -45,6 +55,8 @@ export function ScheduleAppointmentDialog({
           patients={patients}
           defaultPatientId={defaultPatientId}
           defaultDate={defaultDate}
+          action={handleSubmit}
+          pending={pending}
         />
       </DialogContent>
     </Dialog>
